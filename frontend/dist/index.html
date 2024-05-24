@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width; initial-scale=1; maximum-scale=1; user-scalable=0;"/>
+		<title>Prinz Eugen Dashboard MK II</title>
+		<link rel="icon" type="image/png" href="favicon.png"/>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+		<link rel="stylesheet" href="styles/sds/core.css"/>
+		<link rel="stylesheet" href="styles/sds/inputs.css"/>
+		<link rel="stylesheet" href="styles/sds/layouts.css"/>
+		<link rel="stylesheet" href="styles/sds/appearance.css"/>
+		
+		<link rel="stylesheet" href="styles/main.css"/>
+	</head>
+
+	<template id="state-curtain">
+		<div class="container levitating center-contents" id="curtain">Wait</div>
+	</template>
+
+	<template id="state-login">
+		<form class="container column wide levitating stretch-contents content-width" id="form-login">
+			<input type="text" id="login-id" class="field" placeholder="login"/>
+			<input type="password" id="login-token" class="field" placeholder="password"/>
+			<button>Sign in</button>
+		</form>
+	</template>
+
+	<template id="state-online">
+		<nav class="container unpad ungap row center-contents">
+			<div class="tab container selected" data-tab-group="tabs" data-tab-id="dash">Dashboard</div>
+			<div class="tab container" data-tab-group="tabs" data-tab-id="grab">Grabbers</div>
+			<div class="tab container" data-tab-group="tabs" data-tab-id="mode">Moderation</div>
+			<div class="tab container" data-tab-group="tabs" data-tab-id="pool">Pool</div>
+			<div class="tab container" data-tab-group="tabs" data-tab-id="sets">Settings</div>
+		</nav>
+		<!-- Dashboard tab -->
+		<div class="container column content-width wide" data-tab-variant="dash" data-tab-variant-group="tabs">
+			<div class="container unpad column wide">
+				<div class="container row unpad wrap center-contents wide">
+					<button id="dashboard-grab">Grab</button>
+					<button disabled>Cache</button>
+				</div>
+				<fieldset>
+					<legend>
+						<label for="dashboard-manual">API call</label>
+					</legend>
+					<textarea id="dashboard-api" class="field" rows="12"></textarea>
+				</fieldset>
+				<button class="wide" id="dashboard-api-submit">Send</button>
+			</div>
+		</div>
+		<!-- Grabbers tab -->
+		<div class="container column content-width wide hidden" data-tab-variant="grab" data-tab-variant-group="tabs">
+			<div class="container row unpad wrap center-contents wide">
+				<button id="grabbers-save">Save</button>
+				<div>Add:</div>
+				<button data-add-grabber="gelbooru">Gelbooru</button>
+			</div>
+			<div class="container column-reverse unpad stretch-contents wide" id="grabbers-list">
+				<!-- grabbers -->
+			</div>
+		</div>
+		<!-- Moderation tab -->
+		<div class="container column content-width wide hidden" data-tab-variant="mode" data-tab-variant-group="tabs">
+			<div class="container row unpad wrap center-contents wide">
+				<button id="moderables-reload">Reload</button>
+				<button id="moderables-upscale">Upscale</button>
+				<button id="moderables-submit">Submit</button>
+			</div>
+			<div class="container unpad column wide" id="moderables-list">
+				<!-- moderables -->
+			</div>
+		</div>
+		<!-- Pool tab -->
+		<div class="container column content-width wide hidden" data-tab-variant="pool" data-tab-variant-group="tabs">
+			<div class="container row unpad wrap center-contents wide">
+				<button id="pool-load">Load</button>
+			</div>
+			<div class="container unpad row wrap wide center-contents" id="pool-pagination"></div>
+			<div class="container unpad row wrap wide center-contents" id="pool-content">
+				<!-- pool -->
+			</div>
+			<dialog id="pool-preview" class="bordered content-width" onclick="event.target === this && this.close()">
+				<form method="dialog" class="container column wide center-contents">
+					<img src="placeholder.png" class="rounded" />
+					<div class="container row unpad wrap center-contents wide" id="pool-preview-controls"></div>
+				</form>
+			</dialog>
+		</div>
+		<!-- Settings tab -->
+		<div class="container column content-width wide hidden" data-tab-variant="sets" data-tab-variant-group="tabs">
+			<fieldset>
+				<legend><label for="settings-password">Password</label></legend>
+				<input type="text" id="settings-password" class="field" placeholder="Keep empty to keep old password" />
+			</fieldset>
+			<fieldset>
+				<legend><label for="settings-theme">Theme</label></legend>
+				<div id="settings-theme" class="container row wrap wide"></div>
+			</fieldset>
+			<fieldset>
+				<legend><label for="settings-tg-token">Telegram bot token</label></legend>
+				<input type="text" id="settings-tg-token" class="field" />
+			</fieldset>
+			<fieldset>
+				<legend>
+					<label for="settings-additional">Additional data</label>
+					<span id="settings-flicker" class="rounded wide-padded"></span>
+				</legend>
+				<textarea id="settings-additional" class="field" rows="12"></textarea>
+			</fieldset>
+			<button id="settings-save">Save</button>
+			<button id="settings-signout">Sign out</button>
+		</div>
+	</template>
+
+	<template id="generic-grabber">
+		<div class="container column bordered wide hoverable">
+			<div class="container row wrap unpad wide center-contents">
+				<button data-grabber-button="grab">Grab</button>
+				<button data-grabber-button="less">Grab less</button>
+				<button data-grabber-button="remv">Remove</button>
+			</div>
+		</div>
+	</template>
+	<template id="generic-field-multiline">
+		<fieldset>
+			<legend>
+				<label></label>
+				<span></span>
+			</legend>
+			<textarea class="field"></textarea>
+		</fieldset>
+	</template>
+	<template id="generic-field-line">
+		<fieldset>
+			<legend><label></label></legend>
+			<input type="text" class="field" />
+		</fieldset>
+	</template>
+	<template id="generic-moderable">
+		<div class="moderable container column bordered wide hoverable" tabindex="0">
+			<a class="rounded levitating" tabindex="-1" target="_blank"><img class="rounded" src="placeholder.png" /></a>
+			<div class="container unpad row wrap wide center-contents moderable-info"></div>
+			<div class="container unpad row wrap wide center-contents">
+				<button tabindex="-1" data-moderable-button="approve">Approve</button>
+				<button tabindex="-1" data-moderable-button="reject">Reject</button>
+			</div>
+		</div>
+	</template>
+	<template id="generic-pool-item">
+		<article class="clickable hoverable unpad pool-item">
+			<img class="rounded" />
+		</article>
+	</template>
+	<template id="generic-pool-item-tag">
+		<div class="rounded bordered padded"></div>
+	</template>
+	<template id="theme-selector">
+		<svg class="rounded bordered hoverable selector-theme" viewBox="0 0 6 1" xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M0,0 l100,0 l0,1 l-100,0 Z"
+				fill="var(--color-base)"
+			/>
+			<path
+				d="M1,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-secondary)"
+			/>
+			<path
+				d="M2,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-accent)"
+			/>
+			<path
+				d="M3,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-text)"
+			/>
+			<path
+				d="M4,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-base)"
+			/>
+		</svg>
+	</template>
+
+	<body class="wide">
+		<div class="container column inflated" data-tab-container="state" data-tab-default="login">
+			<!-- State Contents -->
+		</div>
+		<!-- Log -->
+		<details class="float-bl console" open >
+			<summary class="glass">Console</summary>
+			<div class="container column-reverse bordered hoverable glass"></div>
+		</details>
+	</body>
+
+	<script src="ts/index.js"></script>
+</html>

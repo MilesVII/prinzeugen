@@ -1,0 +1,25 @@
+.bordered {
+	border: var(--dims-line) solid var(--color-secondary);
+	border-radius: var(--dims-rounding);
+}
+
+.rounded {
+	border-radius: var(--dims-rounding);
+}
+
+.hoverable {
+	transition: border-color var(--transition-time);
+}
+.hoverable:hover {
+	border-color: var(--color-accent)
+}
+
+.solid {
+	background-color: var(--color-secondary);
+	border-radius: var(--dims-rounding);
+}
+
+.glass {
+	backdrop-filter: blur(var(--dims-blur));
+	background-color: var(--color-base-semi);
+}

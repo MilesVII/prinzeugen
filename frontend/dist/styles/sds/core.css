@@ -1,0 +1,112 @@
+/* Seventh Design System */
+
+@media screen and (orientation: landscape) {
+	:root {
+		--reference-unit: 2.35vmin;
+		--dims-content-width: 70vmin;
+		--dims-popup-width: min(60vw, 60vmin);
+		--dims-popup-height: 50vmin;
+	}
+}
+
+@media screen and (orientation: portrait) {
+	:root {
+		--reference-unit: 4.2vmin;
+		--dims-content-width: 100vmin;
+		--dims-popup-width: 100%;
+		--dims-popup-height: 40vh;
+	}
+}
+
+:root {
+	color-scheme: only dark;
+
+	--color-base: #171717;
+	--color-base-semi: rgb(23 23 23 / 70%);
+	--color-secondary: #444444;
+	--color-accent: #DA0037;
+	--color-text: #EDEDED;
+
+	--dims-line:     calc(.1 * var(--reference-unit));
+	--dims-padding:  calc(.2 * var(--reference-unit));
+	--dims-rounding: calc(.3 * var(--reference-unit));
+	--dims-spacing:  calc(.4 * var(--reference-unit));
+	
+	--dims-font-regular: calc(1 * var(--reference-unit));
+	/*
+	--dims-font-h1: calc(2.5 * var(--reference-unit));
+	--dims-font-h2: calc(2.0 * var(--reference-unit));
+	--dims-font-h3: calc(1.8 * var(--reference-unit));
+	--dims-font-h4: calc(1.6 * var(--reference-unit));
+	--dims-font-h5: calc(1.4 * var(--reference-unit));
+	--dims-font-h6: calc(1.2 * var(--reference-unit));
+	*/
+
+	--transition-time: .21s;
+	--dims-blur: 2px;
+	--dims-glow: var(--dims-spacing);
+	--effect-glow: 0 0 var(--dims-glow) var(--color-accent);
+	
+	/*background-color: var(--color-base);*/
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	
+	font-family: Roboto, sans-serif;
+	font-size: var(--dims-font-regular);
+	color: var(--color-text);
+	text-transform: lowercase;
+}
+
+.theme-dark-pink {
+	--color-base: #171717;
+	--color-base-semi: rgb(23 23 23 / 70%);
+	--color-secondary: #444444;
+	--color-accent: #DA0037;
+	--color-text: #EDEDED;
+}
+.theme-dark-teal {
+	--color-base: #222831;
+	--color-base-semi: rgb(34 40 49 / 70%);
+	--color-secondary: #393E46;
+	--color-accent: #00ADB5;
+	--color-text: #EEEEEE;
+}
+.theme-light-teal {
+	--color-base: #DDDDFD;
+	--color-base-semi: rgb(240 240 250 / 70%);
+	--color-secondary: darkgray;
+	--color-accent: #00ADB5;
+	--color-text: #111130;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	margin: 0;
+	border: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+}
+
+body {
+	overflow: hidden auto;
+	
+	--effect-glow: 0 0 var(--dims-glow) var(--color-accent);
+	color: var(--color-text);
+	background-color: var(--color-base);
+}
+
+h1, h2, h3, h4, h5, h6, nav {
+	margin: 0;
+}
+
+img {
+	display: block;
+}

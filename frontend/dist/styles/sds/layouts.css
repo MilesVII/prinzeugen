@@ -1,0 +1,102 @@
+.padded {
+	padding: var(--dims-padding);
+}
+.wide-padded {
+	padding-left: var(--dims-padding);
+	padding-right: var(--dims-padding);
+}
+
+.container {
+	display: flex;
+	gap: var(--dims-spacing);
+	padding: var(--dims-spacing);
+}
+
+.unpad {
+	padding: 0;
+}
+
+.ungap {
+	gap: 0;
+}
+
+.row {
+	flex-flow: row nowrap;
+}
+
+.column {
+	flex-flow: column nowrap;
+}
+
+.column-reverse {
+	flex-flow: column-reverse nowrap;
+}
+
+.wrap {
+	flex-wrap: wrap;
+}
+
+.center-contents {
+	place-items: center;
+	place-content: center;
+}
+
+.stretch-contents {
+	place-content: stretch;
+}
+
+.grid-2 {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 50% 50%);
+}
+
+.float-bl,
+.float-br,
+.float-tl,
+.float-tr {
+	position: fixed;
+}
+.float-bl {
+	bottom: var(--dims-spacing);
+	left: var(--dims-spacing);
+}
+.float-br {
+	bottom: var(--dims-spacing);
+	right: var(--dims-spacing);
+}
+.float-tl {
+	top: var(--dims-spacing);
+	left: var(--dims-spacing);
+}
+.float-tr {
+	top: var(--dims-spacing);
+	right: var(--dims-spacing);
+}
+
+.popup-sized {
+	width: var(--dims-popup-width);
+	height: var(--dims-popup-height);
+}
+
+.inflated {
+	width: 100%;
+	height: 100%;
+}
+
+.wide {
+	width: 100%;
+}
+
+.levitating {
+	margin: auto;
+}
+
+.content-width {
+	max-width: var(--dims-content-width);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.hidden {
+	display: none !important;
+}

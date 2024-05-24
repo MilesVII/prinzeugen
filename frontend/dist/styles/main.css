@@ -1,0 +1,87 @@
+.tabbar {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: center;
+	width: 100%;
+	margin: 1vw 0 1vw 0;
+
+	border-style: solid;
+	border-width: 0;
+	border-bottom-width: .2vw;
+	border-color: var(--shy);
+}
+
+.tab {
+	border: 0 solid transparent;
+	border-bottom-width: var(--dims-line);
+	cursor: pointer;
+}
+.tab:hover {
+	border-color: var(--color-accent);
+}
+.tab.selected {
+	background-color: var(--color-accent);
+	border-color: var(--color-accent);
+}
+
+.console > summary {
+	cursor: pointer;
+	color: var(--color-accent);
+	width: fit-content;
+	border-radius: var(--dims-rounding);
+	padding: var(--dims-padding);
+}
+.console[data-unread="0"] > summary {
+	color: inherit;
+}
+.console {
+	width: calc(var(--dims-popup-width) - var(--dims-spacing) * 2);
+}
+.console[open] > div {
+	max-height: var(--dims-popup-height);
+	color: var(--color-secondary);
+	overflow: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-secondary) transparent;
+}
+.console[open] > div:hover {
+	scrollbar-color: var(--color-accent) transparent;
+}
+.console[open] > div > div:hover {
+	color: var(--color-text);
+}
+.console > div > div:first-child {
+	color: var(--color-accent);
+}
+
+.moderable img {
+	max-height: 50vh;
+	max-width: 100%;
+	object-fit: contain;
+}
+.moderable.approved {
+	background-color: hsla(100, 72%, 23%, .42);
+}
+.moderable.rejected {
+	background-color: hsla(0, 72%, 23%, .42);
+}
+.moderable {
+	transition: box-shadow var(--transition-time), border-color var(--transition-time);
+}
+.moderable:focus {
+	border-color: var(--color-accent);
+	box-shadow: var(--effect-glow);
+	outline: none;
+}
+
+.pool-item > img {
+	max-height: 20vh;
+}
+
+.pool-item[data-failed="true"] {
+	opacity: .7;
+}
+
+.selector-theme {
+	height: 1.2lh;
+}
