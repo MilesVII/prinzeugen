@@ -148,6 +148,33 @@ export function decide(approve: boolean){
 		document.querySelector("#moderables-submit")?.scrollIntoView({behavior: "smooth", block: "center"});
 }
 
+export function moveFocus(next: boolean) {
+	const focused = document.activeElement;
+
+	if (!focused) {
+		const target = document.querySelector<HTMLElement>(".moderable");
+		if (!target) return;
+
+		target.focus();
+		return;
+	}
+
+	const options = Array.from(document.querySelectorAll<HTMLElement>(".moderable"));
+	const currentIndex = options.findIndex(option => option === focused);
+
+	if (currentIndex === -1) {
+		if (options[0]) options[0].focus();
+		return;
+	}
+	if (options.length === 1) return;
+
+	let targetIndex = currentIndex + (next ? 1 : -1);
+	if (targetIndex < 0) targetIndex = options.length - 1;
+	if (targetIndex >= options.length) targetIndex = 0;
+
+	options[targetIndex]?.focus();
+}
+
 export async function moderate(){
 	const decisionsCards = document.querySelectorAll<HTMLElement>(".moderable.approved, .moderable.rejected");
 	const decisions = Array.from(decisionsCards).map(d => ({

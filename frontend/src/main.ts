@@ -8,7 +8,7 @@ import { init as initConsole, report } from "./utils/console";
 import { init as initTheme, selectorList as themeSelectorList } from "./utils/themes";
 
 import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing";
-import { decide, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
+import { decide, moveFocus, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
 import { loadMessagePool } from "./pool";
 
 main();
@@ -95,6 +95,11 @@ async function authorize(userData: any){
 			.querySelector<HTMLElement>(query)
 			?.addEventListener("click", action);
 	}
+	function preventDefault(query: string) {
+		document
+			.querySelector<HTMLElement>(query)
+			?.addEventListener("mousedown", e => e.preventDefault());
+	}
 
 	addClick("#dashboard-grab", batchGrab);
 	addClick("#dashboard-api-submit", manualAPICall);
@@ -102,9 +107,19 @@ async function authorize(userData: any){
 	addClick("#moderables-reload", reloadModerables);
 	addClick("#moderables-upscale", upscalePreviews);
 	addClick("#moderables-submit", moderate);
-	addClick("#pool-load", () => loadMessagePool());
+	addClick("#pool-load", loadMessagePool);
 	addClick("#settings-save", saveSettings);
 	addClick("#settings-signout", signOut);
+
+	addClick("#mobile-controls-up", () => moveFocus(false));
+	addClick("#mobile-controls-approve", () => decide(true));
+	addClick("#mobile-controls-down", () => moveFocus(true));
+	addClick("#mobile-controls-reject", () => decide(false));
+
+	preventDefault("#mobile-controls-up");
+	preventDefault("#mobile-controls-approve");
+	preventDefault("#mobile-controls-down");
+	preventDefault("#mobile-controls-reject");
 
 	initConsole();
 
@@ -141,21 +156,6 @@ async function login(e: Event){
 	}
 
 	return false;
-}
-
-let wipeLock = true;
-async function wipePool(){
-	if (wipeLock){
-		wipeLock = false;
-		console.log("safety off. call function again to wipe current pool");
-	} else {
-		wipeLock = true;
-		pullCurtain(true);
-		const wipeResponse = await callAPI("wipePool", {}, true);
-		pullCurtain(false);
-		if (wipeResponse.status === 200)
-			location.reload();
-	}
 }
 
 function getManualAPICallText(){

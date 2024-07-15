@@ -24,6 +24,32 @@
 	border-color: var(--color-accent);
 }
 
+.gui-container {
+	width: 100%;
+	pointer-events: none;
+}
+.gui-container > * {
+	pointer-events: auto;
+}
+
+.mobile-controls {
+	position: fixed;
+	right: var(--dims-spacing);
+	bottom: 30vh;
+
+	width: fit-content;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 1fr 1fr;
+	gap: var(--dims-spacing);
+	margin-inline-start: auto;
+}
+.mobile-controls > button{
+	aspect-ratio: 1/1;
+	font-size: 3em;
+	line-height: 1em;
+}
+
 .console > summary {
 	cursor: pointer;
 	color: var(--color-accent);
