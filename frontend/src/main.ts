@@ -107,7 +107,7 @@ async function authorize(userData: any){
 	addClick("#moderables-reload", reloadModerables);
 	addClick("#moderables-upscale", upscalePreviews);
 	addClick("#moderables-submit", moderate);
-	addClick("#pool-load", loadMessagePool);
+	addClick("#pool-load", () => loadMessagePool()); // do not unwrap, will pass event that overrides default page param
 	addClick("#settings-save", saveSettings);
 	addClick("#settings-signout", signOut);
 
