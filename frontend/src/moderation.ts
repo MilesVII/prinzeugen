@@ -1,5 +1,6 @@
 import { callAPI, fromTemplate, sleep, chunk } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
+import { isBusy as upscalerIsBusy, loadTasks, runTasks } from "./utils/upscaler";
 
 export async function downloadModerables(){
 	const messages = await callAPI("getModerables", null, true);
@@ -94,36 +95,21 @@ function renderModerable(message: any, id: string){
 	return proto;
 }
 
-const UPSCALE_RETRY_COUNT = 3;
 export async function upscalePreviews(){
-	async function upscale(e: HTMLElement, retriesLeft = UPSCALE_RETRY_COUNT){
-		if (e.dataset.upscaled && retriesLeft === UPSCALE_RETRY_COUNT) return;
-		e.dataset.upscaled = "weewee";
-
-		const url = `/imageproxy?bypass=1&url=${e.dataset.original}`;
-		const response = await fetch(url);
-		if (response.status === 504) {
-			if (retriesLeft <= 0) return;
-			await sleep(Math.random() * 5000);
-			await upscale(e, retriesLeft - 1);
-			return;
-		}
-		if (!response.ok) return;
-		if (!response.headers.get("content-type")?.startsWith("image/")) return;
-
-		const data = await response.arrayBuffer();
-		const blob = new Blob([data]);
-
-		const image = e.querySelector("img");
-		if (image) image.src = URL.createObjectURL(blob);
-	}
+	if (upscalerIsBusy()) return;
 
 	const moderables = Array.from(document.querySelectorAll<HTMLElement>(".moderable"));
-	const chomnks = chunk(moderables, 7);
-	for (const chonk of chomnks) {
-		const scaleJobs = chonk.map(e => upscale(e));
-		await Promise.allSettled(scaleJobs);
-	};
+	const abortButton = document.querySelector("#moderables-upscale-abort");
+	const upscaleButton = document.querySelector("#moderables-upscale");
+
+	loadTasks(moderables);
+	runTasks(() => {
+		upscaleButton?.classList.remove("hidden");
+		abortButton?.classList.add("hidden");
+	});
+
+	upscaleButton?.classList.add("hidden");
+	abortButton?.classList.remove("hidden");
 }
 
 export function fixFocus(){

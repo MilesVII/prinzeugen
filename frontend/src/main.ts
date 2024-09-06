@@ -10,6 +10,7 @@ import { init as initTheme, selectorList as themeSelectorList } from "./utils/th
 import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing";
 import { decide, moveFocus, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
 import { loadMessagePool } from "./pool";
+import { flushTasks } from "./utils/upscaler";
 
 main();
 
@@ -106,6 +107,7 @@ async function authorize(userData: any){
 	addClick("#grabbers-save", saveGrabbers);
 	addClick("#moderables-reload", reloadModerables);
 	addClick("#moderables-upscale", upscalePreviews);
+	addClick("#moderables-upscale-abort", flushTasks)
 	addClick("#moderables-submit", moderate);
 	addClick("#pool-load", () => loadMessagePool()); // do not unwrap, will pass event that overrides default page param
 	addClick("#settings-save", saveSettings);
