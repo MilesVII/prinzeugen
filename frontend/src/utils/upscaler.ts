@@ -20,7 +20,7 @@ async function upscale(t: UpscaleTask, abortSignal: AbortSignal, e: HTMLElement,
 
 	e.dataset.upscaled = "weewee";
 
-	const url = `/imageproxy?bypass=1&url=${e.dataset.original}`;
+	const url = `/proxy?url=${e.dataset.original}`;
 
 	const response = await fetch(url, { signal: abortSignal });
 	if (t.aborted) return;
