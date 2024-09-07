@@ -1,6 +1,6 @@
 import { callAPI, fromTemplate, sleep, chunk } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
-import { isBusy as upscalerIsBusy, loadTasks, runTasks } from "./utils/upscaler";
+import { isBusy as upscalerIsBusy, loadTasks, runTasks, flushTasks } from "./utils/upscaler";
 
 export async function downloadModerables(){
 	const messages = await callAPI("getModerables", null, true);
@@ -162,6 +162,8 @@ export function moveFocus(next: boolean) {
 }
 
 export async function moderate(){
+	flushTasks();
+
 	const decisionsCards = document.querySelectorAll<HTMLElement>(".moderable.approved, .moderable.rejected");
 	const decisions = Array.from(decisionsCards).map(d => ({
 		id: parseInt(d.dataset.id ?? "", 10),

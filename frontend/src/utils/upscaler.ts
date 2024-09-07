@@ -79,7 +79,7 @@ export function runTasks(onComplete: () => void) {
 	tasksToStart.forEach(t => {
 		const controller = new AbortController();
 		t.running = true;
-		t.abort = controller.abort;
+		t.abort = () => controller.abort();
 		t.start(t, controller.signal).finally(() => {
 			const index = tasks.findIndex(task => task.target === t.target);
 			tasks.splice(index, 1);
