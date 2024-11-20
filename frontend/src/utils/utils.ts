@@ -89,3 +89,11 @@ export function conditionedList<T>(...pairs: [boolean, T][]): T[] {
 		.filter(([condition]) => condition)
 		.map(([_c, value]) => value));
 }
+
+export function zip
+	<A extends Record<any, any>, B extends Record<any, any>>
+	(a: A[], b: B[]): (A & B)[] {
+	const [base, added] = a.length < b.length ? [a, b] : [b, a];
+
+	return base.map((value, index) => ({...value, ...added[index]}));
+}

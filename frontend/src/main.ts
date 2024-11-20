@@ -11,6 +11,7 @@ import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing
 import { decide, moveFocus, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
 import { loadMessagePool } from "./pool";
 import { flushTasks } from "./utils/upscaler";
+import { refeed } from "./gb-feeder";
 
 main();
 
@@ -104,6 +105,7 @@ async function authorize(userData: any){
 
 	addClick("#dashboard-grab", batchGrab);
 	addClick("#dashboard-api-submit", manualAPICall);
+	addClick("#refeeder-button", refeed);
 	addClick("#grabbers-save", saveGrabbers);
 	addClick("#moderables-reload", reloadModerables);
 	addClick("#moderables-upscale", upscalePreviews);

@@ -32,6 +32,7 @@
 	<template id="state-online">
 		<nav class="container unpad ungap row center-contents">
 			<div class="tab container selected" data-tab-group="tabs" data-tab-id="dash">Dashboard</div>
+			<div class="tab container" data-tab-group="tabs" data-tab-id="feed">Collection</div>
 			<div class="tab container" data-tab-group="tabs" data-tab-id="grab">Grabbers</div>
 			<div class="tab container" data-tab-group="tabs" data-tab-id="mode">Moderation</div>
 			<div class="tab container" data-tab-group="tabs" data-tab-id="pool">Pool</div>
@@ -44,6 +45,7 @@
 					<button id="dashboard-grab">Grab</button>
 					<button disabled>Cache</button>
 				</div>
+
 				<fieldset>
 					<legend>
 						<label for="dashboard-manual">API call</label>
@@ -51,6 +53,18 @@
 					<textarea id="dashboard-api" class="field" rows="12"></textarea>
 				</fieldset>
 				<button class="wide" id="dashboard-api-submit">Send</button>
+			</div>
+		</div>
+		<!-- Refeeder tab -->
+		<div class="container column content-width wide hidden" data-tab-variant="feed" data-tab-variant-group="tabs">
+			<fieldset>
+				<legend>
+					<label for="refeeder-input">Refeed artists</label>
+				</legend>
+				<textarea id="refeeder-input" class="field" rows="12"></textarea>
+			</fieldset>
+			<button class="wide" id="refeeder-button">Submit</button>
+			<div class="grid-2" id="refeeder-log">
 			</div>
 		</div>
 		<!-- Grabbers tab -->

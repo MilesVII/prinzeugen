@@ -111,3 +111,18 @@
 .selector-theme {
 	height: 1.2lh;
 }
+
+.refeeder-log-value-ok {
+	color: var(--color-text);
+}
+
+.refeeder-log-value-error {
+	background: var(--color-accent);
+	color: var(--color-base);
+	border-radius: var(--dims-rounding);
+	padding-inline: var(--dims-spacing);
+}
+
+.refeeder-log-value-dupe {
+	color: var(--color-secondary);
+}
