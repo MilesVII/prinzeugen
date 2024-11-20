@@ -48,6 +48,7 @@
 .grid-2 {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, 50% 50%);
+	gap: var(--dims-spacing);
 }
 
 .float-bl,

@@ -63,6 +63,7 @@ fieldset {
 	border-radius: var(--dims-rounding);
 	padding: var(--dims-padding);
 	transition: border-color var(--transition-time);
+	margin: 0;
 }
 fieldset > legend {
 	display: flex;
