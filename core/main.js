@@ -33,8 +33,8 @@ const schema = {
 	},
 	saveSettings: {
 		...authSchema,
-		newUserToken: [],
-		newTgToken: [],
+		newUserToken: [OPTIONAL, "string"],
+		newTgToken: [OPTIONAL, "string"],
 		additionalData: "string"
 	},
 	setGrabbers: {
