@@ -135,7 +135,6 @@
 
 .refeeder-list-counter {
 	color: var(--color-secondary);
-	margin-inline-start: var(--dims-spacing);
 	user-select: none;
 }
 

@@ -247,6 +247,9 @@ export function refreshFeederList() {
 		section
 			.sort(([, a], [, b]) => b - a)
 			.forEach(([artist, count]) => {
+				const valueContainer = document.createElement("div");
+				valueContainer.className = "container row unpad";
+
 				const value = document.createElement("div");
 				value.textContent = artist;
 				
@@ -254,8 +257,8 @@ export function refreshFeederList() {
 				counter.className = "refeeder-list-counter";
 				counter.textContent = `${count}`;
 				
-				value.append(counter);
-				listContainer.append(value);
+				valueContainer.append(value, counter);
+				listContainer.append(valueContainer);
 			});
 	});
 }
