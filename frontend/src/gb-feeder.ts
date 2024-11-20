@@ -1,6 +1,7 @@
 import { callAPI, fromTemplate, sleep, chunk, zip, safe } from "./utils/utils";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { displayGrabbers, downloadGrabbers } from "./grabbing";
+import { report } from "./utils/console";
 
 const CONCURRENT_QUERIES = 2;
 
@@ -23,7 +24,6 @@ export async function refeed() {
 		pullCurtain(false);
 		return;
 	}
-	displayGrabbers(grabbers);
 
 	updateCurtainMessage("Collecting meta");
 	const queue = [...artists];
@@ -69,8 +69,10 @@ export async function refeed() {
 
 	pullCurtain(false);
 
+	displayGrabbers(grabbers);
 	if (newMemo) setMemo(newMemo)
 	renderResults(results);
+	refreshFeederList();
 }
 
 function parseArtistList() {
@@ -175,22 +177,21 @@ async function updateList(results: PostCount[], oldMemo: string) {
 		const newResults = results.filter(({ count }) => typeof count === "number");
 		const newList = Object.fromEntries(newResults.map(row => [row.artist, row.count as number]));
 
-		const memo = oldMemo;
-		const memoParsed = safe(() => JSON.parse(memo));
+		const memo = parseMemo(oldMemo);
 
-		if (memoParsed?.feeder) {
+		if (memo.parsed?.feeder) {
 			return {
-				...memoParsed,
+				...memo.parsed,
 				feeder: {
-					...memoParsed.feeder,
+					...memo.parsed.feeder,
 					...newList
 				}
 			};
 		} else {
-			if (memo) {
+			if (memo.raw) {
 				return {
 					feeder: newList,
-					old: memo
+					old: memo.raw
 				}
 			} else {
 				return {
@@ -220,4 +221,105 @@ function checkExisting(artist: string, grabbers: any[]): PostCount | null {
 	}
 
 	return null;
+}
+
+export function refreshFeederList() {
+	const memo = parseMemo(readMemo());
+	if (!memo.parsed?.feeder) return;
+	const list = memo.list();
+
+	const sections = ([
+		["Heavy", list.filter(([, count]) => count >= 200)],
+		["Medium", list.filter(([, count]) => count >= 120 && count < 200)],
+		["Light", list.filter(([, count]) => count < 120)]
+	] as const).filter(([, list]) => list.length > 0);
+
+	const listContainer = document.querySelector("#refeeder-list");
+	if (!listContainer) return;
+	listContainer.innerHTML = "";
+
+	sections.forEach(([name, section]) => {
+		const title = document.createElement("div");
+		title.className = "refeeder-section";
+		title.textContent = name;
+		listContainer.append(title);
+
+		section
+			.sort(([, a], [, b]) => b - a)
+			.forEach(([artist, count]) => {
+				const value = document.createElement("div");
+				value.textContent = artist;
+				
+				const counter = document.createElement("span");
+				counter.className = "refeeder-list-counter";
+				counter.textContent = `${count}`;
+				
+				value.append(counter);
+				listContainer.append(value);
+			});
+	});
+}
+
+export async function updateFeederList() {
+	const oldMemo = parseMemo(readMemo());
+	const oldList = oldMemo.list();
+	if (!oldMemo.parsed || !oldList) return;
+
+	pullCurtain(true, "Updating grabbers");
+	const grabbers = await downloadGrabbers();
+	if (!grabbers) {
+		pullCurtain(false);
+		return;
+	}
+
+	const grabberArtists = grabbers
+		.filter(grabber => grabber?.type === "gelbooru")
+		.map(grabber => grabber.config?.tags)
+		.reduce((p, c) => {
+			p.push(...c);
+			return p;
+		}, []);
+
+	const newList = oldList.filter(([artist]) => !grabberArtists.includes(artist));
+
+	const delta = oldList.length - newList.length;
+	let newMemoString = null;
+	if (delta !== 0) {
+		report(`Removing ${delta} ${delta === 1 ? "artist" : "artists"} from feeder`);
+		
+		oldMemo.parsed.feeder = Object.fromEntries(newList);
+		newMemoString = JSON.stringify(oldMemo.parsed, undefined, "\t");
+		
+		updateCurtainMessage("Updating memo");
+		await callAPI("saveSettings", {
+			additionalData: newMemoString
+		}, true);
+	} else {
+		report("No duplicates found, nothing to update");
+	}
+
+	pullCurtain(false);
+
+	if (newMemoString) setMemo(newMemoString);
+	displayGrabbers(grabbers);
+	refreshFeederList();
+}
+
+function parseMemo(memo: string = "") {
+	const parsed = safe(() => JSON.parse(memo));
+
+	const list = () => {
+		if (!parsed?.feeder) return [];
+		const oldFeeder = parsed.feeder as Record<string, number>;
+		return Object.keys(oldFeeder)
+			.map(artist =>
+				[artist, oldFeeder[artist]] as [artist: string, count: number]
+			);
+	}
+
+	return {
+		raw: memo,
+		parsed,
+		list
+	};
 }

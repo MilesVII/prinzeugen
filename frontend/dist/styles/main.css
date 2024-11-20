@@ -126,3 +126,19 @@
 .refeeder-log-value-dupe {
 	color: var(--color-secondary);
 }
+
+.refeeder-section {
+	color: var(--color-secondary);
+	border-bottom: var(--dims-line) solid var(--color-secondary);
+	margin-top: var(--dims-spacing);
+}
+
+.refeeder-list-counter {
+	color: var(--color-secondary);
+	margin-inline-start: var(--dims-spacing);
+	user-select: none;
+}
+
+#refeeder-list {
+	margin-bottom: 3rem;
+}

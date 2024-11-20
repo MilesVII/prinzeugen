@@ -11,7 +11,7 @@ import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing
 import { decide, moveFocus, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
 import { loadMessagePool } from "./pool";
 import { flushTasks } from "./utils/upscaler";
-import { refeed } from "./gb-feeder";
+import { refeed, refreshFeederList, updateFeederList } from "./gb-feeder";
 
 main();
 
@@ -106,6 +106,8 @@ async function authorize(userData: any){
 	addClick("#dashboard-grab", batchGrab);
 	addClick("#dashboard-api-submit", manualAPICall);
 	addClick("#refeeder-button", refeed);
+	addClick("#refeeder-view", refreshFeederList);
+	addClick("#refeeder-update", updateFeederList);
 	addClick("#grabbers-save", saveGrabbers);
 	addClick("#moderables-reload", reloadModerables);
 	addClick("#moderables-upscale", upscalePreviews);
@@ -203,8 +205,8 @@ function updateSettingsFlicker(){
 }
 
 async function saveSettings(){
-	const newPassword = document.querySelector<HTMLInputElement>("#settings-password")?.value.trim() || null;
-	const tgToken = document.querySelector<HTMLInputElement>("#settings-tg-token")?.value || null;
+	const newPassword = document.querySelector<HTMLInputElement>("#settings-password")?.value.trim() || undefined;
+	const tgToken = document.querySelector<HTMLInputElement>("#settings-tg-token")?.value || undefined;
 	const additionals = document.querySelector<HTMLTextAreaElement>("#settings-additional")?.value ?? "";
 
 	pullCurtain(true);
