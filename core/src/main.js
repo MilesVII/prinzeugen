@@ -135,7 +135,6 @@ async function grab(user, id, batchSize){
 	}
 
 	const options = {
-		skipArtists: user == 3,
 		batchSize: batchSize
 	};
 
@@ -350,7 +349,15 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return report;
 	}
 	if (message.version === 4) {
+		const meta = await pingContentUrl(message.content);
+		if (!meta) return "No head?";
+		
+		const report = {};
 
+		report.direct = await metaSand(meta.type, message.content, message.links);
+		if (safeParse(report.direct)?.ok) return null;
+
+		return report;
 	}
 	
 	return "WTF is that message version, how did you pass validation";
@@ -378,6 +385,31 @@ export default async function handler(request) {
 
 	switch (request.action){
 		case ("debug"): {
+			const grabberConfigs = await getGrabbers(request.user);
+			const config = grabberConfigs[0];
+			const glb = grabbersMeta["gelbooru"];
+
+			const dump = await sql`select * from "pool" where "user" = ${request.user}`;
+			const errs = [];
+			for (const entry of dump) {
+				if (entry.message.version === 3) {
+					const button = entry.message.links.find(l => l.text === "Gelbooru");
+					if (!button) {
+						errs.push(`#${entry.id}: no button`);
+						continue;
+					}
+
+					const ref = button.url.split("&id=")[1]
+					const newMessage = await glb.verify(config, ref)
+					if (!newMessage) {
+						errs.push(`#${entry.id}: no verify`);
+						continue;
+					}
+					await sql`update pool set ${sql({message: newMessage})} where id = ${entry.id}`
+					console.log(`#${entry.id}: updated`);
+				}
+			}
+			errs.forEach(console.error);
 			return [200]
 		}
 		case ("login"): {

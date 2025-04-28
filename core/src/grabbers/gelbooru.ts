@@ -92,7 +92,9 @@ async function gelbooruPosts(
 	token: string,
 	user: number,
 	page: number,
-	tags: string[]
+	tags: string[],
+	skipArtists = false,
+	batchLimit = 100
 ): Promise<ParsedPost[]> {
 	const params = buildURLParams({
 		page: "dapi",
@@ -102,13 +104,30 @@ async function gelbooruPosts(
 		pid: page,
 		api_key: token,
 		user_id: user,
-		...query
+		...query,
+		limit: batchLimit
 	});
 
 	const url = `https://gelbooru.com/index.php?${params}`;
 	const response = await fetch(url);
 	const payload = safeParse(await response.text()) || {};
-	return (payload?.post || []).map((raw: any) => parse(raw, tags));
+	const posts: ParsedPost[] = (payload?.post || []).map((raw: any) => parse(raw, tags));
+
+	const allTags = Array.from(
+		new Set(posts
+			.map(p => p.tags)
+			.reduce((p: string[], c) => p.concat(c), [])
+		).values()
+	);
+
+	const allArtists = skipArtists
+		? []
+		: await filterArtists(allTags, user, token);
+	
+	if (!allArtists) return [];
+	posts.forEach(p => p.artists = allArtists.filter((a) => p.tags.includes(a)));
+
+	return posts;
 }
 
 function postToMessage(post: ParsedPost): Message {
@@ -164,41 +183,16 @@ export const gelbooruGrabber: GelbooruGrabber = {
 			grabber.credentials.token,
 			grabber.credentials.user,
 			0,
-			grabber.config.tags
+			grabber.config.tags,
+			options.skipArtists,
+			options.batchLimit
 		);
-
-		const allTags = Array.from(
-			new Set(posts
-				.map(p => p.tags)
-				.reduce((p: string[], c) => p.concat(c), [])
-			).values()
-		);
-
-		if (posts.length > 0){
-			const allArtists = options.skipArtists ? [] : await filterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
-			if (allArtists)
-				posts.forEach((p: any) => p.artists = allArtists.filter((a) => p.tags.includes(a)));
-			else
-				return [];
-		}
 
 		if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
 
 		return posts.map(postToMessage);
 	},
 	verify: async (config, reference) => {
-		const params = buildURLParams({
-			page: "dapi",
-			s: "post",
-			q: "index",
-			id: reference,
-			pid: 0,
-			json: 1,
-			api_key: config.credentials.token,
-			user_id: config.credentials.user
-		});
-		const url = `https://gelbooru.com/index.php?${params}`;
-		
 		const posts = await gelbooruPosts(
 			{ id: parseInt(reference, 10) },
 			config.credentials.token,

@@ -27,7 +27,8 @@ type GelbooruConfig = {
 	}
 };
 type GelbooruOptions = {
-	skipArtists?: boolean
+	skipArtists?: boolean,
+	batchLimit?: number
 }
 
 export type GelbooruGrabber = Grabber<"gelbooru", GelbooruConfig, GelbooruOptions>
