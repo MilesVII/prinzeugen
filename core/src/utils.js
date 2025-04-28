@@ -1,7 +1,5 @@
 import * as https from "https";
 import { pbkdf2Sync } from "node:crypto";
-import sharp from "sharp";
-import { config } from "./configProvider.js";
 
 export function hashPassword(raw){
 	const key = pbkdf2Sync(raw, "m1ku39", 7000, 64, "sha512");
@@ -116,7 +114,7 @@ export function dl(url){
 	});
 }
 
-export function tg(command, payload, token = config.tg.tokens.miku){
+export function tg(command, payload, token = Bun.env.TG_TOKEN){
 	const url = `https://api.telegram.org/bot${token}/${command}`;
 	const options = {
 		method: "POST",
@@ -131,7 +129,7 @@ export function tg(command, payload, token = config.tg.tokens.miku){
 
 export function tgReport(message, token){
 	return tg("sendMessage", {
-		chat_id: config.tg.targets.me,
+		chat_id: Bun.env.TG_TARGET_ME,
 		text: message
 	}, token);
 }
@@ -159,48 +157,4 @@ export function escapeMarkdown(raw){
 
 export function pickRandom(array, random = Math.random()) {
 	return array[Math.floor(array.length * random)]
-}
-
-export async function processImage(src, options){
-	options = Object.assign({
-		quality: 80,
-		format: "png"
-	}, options);
-
-	let horns = sharp(src);
-
-	if (options.resize)
-		horns = horns.resize(options.resize.w, options.resize.h, {fit: "inside"});
-	
-	let mime;
-	switch (options.format){
-		case ("png"): {
-			horns = horns.png()
-			mime = "image/png";
-			break;
-		}
-		case ("jpeg"): {
-			horns = horns.jpeg({quality: options.quality})
-			mime = "image/jpeg";
-			break;
-		}
-		case ("webp"): {
-			horns = horns.webp({quality: options.quality})
-			mime = "image/webp";
-			break;
-		}
-		case ("avif"):
-		default: {
-			horns = horns.avif({quality: options.quality})
-			mime = "image/avif";
-			break;
-		}
-	}
-
-	const buffer = await horns.toBuffer();
-
-	return {
-		data: buffer,
-		mime: mime
-	};
 }

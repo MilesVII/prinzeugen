@@ -1,16 +1,11 @@
 {
   "type": "module",
   "dependencies": {
-    "arstotzka": "^0.13.3",
-    "express": "^4.19.2",
-    "postgres": "^3.4.3",
-    "sharp": "^0.31.3"
   },
   "devDependencies": {
     "esbuild": "0.20.0"
   },
   "scripts": {
-    "start": "node server.js",
     "front-build": "esbuild frontend/src/main.ts --bundle --sourcemap         --outfile=frontend/dist/ts/index.js",
     "front-watch": "esbuild frontend/src/main.ts --bundle --sourcemap --watch --outfile=frontend/dist/ts/index.js"
   }

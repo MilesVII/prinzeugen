@@ -1,5 +1,5 @@
 
-const api = window.location.hostname === "localhost" ? "https://prinzeugen.fokses.pro/api" : "/api"
+const api = window.location.hostname === "localhost" ? "http://localhost:7780/api" : "/api"
 
 export async function callAPI(action: string, data: Record<string, any> | null, useLogin = true){
 	function safeParse(str: string){

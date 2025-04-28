@@ -1,0 +1,17 @@
+{
+  "name": "core",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/server.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "arstotzka": "^0.13.3",
+    "postgres": "^3.4.5"
+  }
+}

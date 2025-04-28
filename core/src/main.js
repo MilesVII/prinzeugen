@@ -1,10 +1,20 @@
-import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown, processImage } from "./utils.js";
-import { grabbersMeta } from "./grabbers.js";
-import { validate, ARRAY_OF, OPTIONAL, DYNAMIC, ANY_OF } from "arstotzka"; 
-import { config } from "./configProvider.js";
+import { validate, ARRAY_OF, OPTIONAL, DYNAMIC, ANY_OF } from "arstotzka";
 import postgres from "postgres";
 
-const sql = postgres(config.sql.connections.kriegsspiel);
+import {
+	chunk,
+	tg,
+	tgReport,
+	phetchV2,
+	safeParse,
+	hashPassword,
+	parseTelegramTarget,
+	escapeMarkdown
+} from "./utils.js";
+import { registry as grabbersMeta } from "./grabbers/index.ts";
+import { messageSchema, TG_BUTTON_SCHEMA } from "./grabbers/message.js"
+
+const sql = postgres(Bun.env.DB_CONNECTION);
 
 const NINE_MB = 9 * 1024 * 1024;
 const PUB_FLAGS = {
@@ -16,11 +26,6 @@ const PUB_FLAGS = {
 	DOUBLE_TAP: "doubletap"
 };
 const imageProxy = url => `https://prinzeugen.fokses.pro/imageproxy?url=${url}&randomize=${Math.random()}`;
-
-const TG_BUTTON_SCHEMA = {
-	text: "string",
-	url: "string"
-};
 
 const authSchema = {
 	user: "number",
@@ -40,10 +45,7 @@ const schema = {
 	setGrabbers: {
 		...authSchema,
 		grabbers: ARRAY_OF([
-			DYNAMIC(x => grabbersMeta[x?.type]?.schema),
-			{
-				type: "string"
-			}
+			DYNAMIC(x => grabbers[x?.type]?.configSchema)
 		])
 	},
 	getGrabbers: {
@@ -104,41 +106,6 @@ const schema = {
 	}
 };
 
-const messageSchema = [
-	{//0, deprecated version, publisher depends on it's 'raw' property to convert to newer version
-		version: ["number", x => x == 0],
-		attachments: "array",
-		caption: "string"
-	},
-	{//1
-		version: ["number", x => x == 1],
-		image: ARRAY_OF("string"),
-		links: ARRAY_OF(TG_BUTTON_SCHEMA)
-	},
-	{//2, telegram preuploaded
-		version: ["number", x => x == 2],
-		id: "string",
-		type: "string",
-		links: "array"
-	},
-	{//3, no raw
-		version: ["number", x => x == 3],
-		raw: [OPTIONAL, x => false],
-		tags: [OPTIONAL, ARRAY_OF("string")],
-		artists: [OPTIONAL, ARRAY_OF("string")],
-		nsfw: [OPTIONAL, "boolean"],
-		cached: [OPTIONAL, "boolean"],
-		notCacheable: [OPTIONAL, "boolean"],
-		cachedContent: [OPTIONAL, {
-			content: "string",
-			preview: "string",
-		}],
-		content: "string",
-		preview: "string",
-		links: ARRAY_OF(TG_BUTTON_SCHEMA)
-	}
-];
-
 function getApproved(user, limit = "all", offset = 0){
 	return (sql`
 		select *, count(*) over() as total
@@ -175,7 +142,7 @@ async function grab(user, id, batchSize){
 	const moderated = [];
 	const approved = [];
 	for (const grabber of selection){
-		const prom = grabbersMeta[grabber.type].action(grabber, options);
+		const prom = grabbersMeta[grabber.type].grab(grabber, options);
 
 		if (grabber.config.moderated) 
 			moderated.push(prom);
@@ -356,64 +323,14 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return tg(command, messageData, token);
 	}
 
-	if (message.version == 0){
-		message.version = 1;
-		
-		const imageVariants = message.attachments[0]
-			.slice(0, 2)
-			.filter(l => l.length > 0);
-
-		message.image = imageVariants;
-
-		if (!message.raw.source?.startsWith("http")) message.raw.source = null;
-		message.links = [
-			{text: "Gelbooru", url: message.raw.link},
-			{text: "Source", url: message.raw.source || null},
-		].filter(i => i.url).concat(message.raw.artists.map(a => ({
-			text: `🎨 ${a}`,
-			url: `https://gelbooru.com/index.php?page=post&s=list&tags=${a}`
-		})));
-	}
-	if (message.version == 1){
-		if (message.image.length > 0){
-			const meta = await pingContentUrl(message.image[0]);
-			if (!meta) return "No head?";
-			let usingProxy = flags.includes(PUB_FLAGS.USE_PROXY);
-
-			let content = message.image[0];
-			if (meta.type == "img" && usingProxy) content = imageProxy(content);
-			if (meta.type == "img" && !usingProxy && meta.length > NINE_MB){
-				if (message.image[1]){
-					content = message.image[1];
-				} else {
-					content = imageProxy(content);
-					usingProxy = true;
-				}
-			}
-
-			const report = {};
-
-			report.tg = await metaSand(meta.type, content, message.links);
-			if (safeParse(report.tg)?.ok) return null;
-
-			if (meta.type != "img" || usingProxy)
-				return report;
-			content = imageProxy(content);
-			report.retry = await metaSand(meta.type, content, message.links);
-			if (safeParse(report.retry)?.ok) 
-				return null;
-			else
-				return report;
-		} else {
-			return "No attachments";
-		}
-	}
-	if (message.version == 2){
+	if (message.version === 2) {
 		const report = await metaSand(message.type, message.id, message.links);
 		if (safeParse(report)?.ok) return null;
 		return report;
 	}
-	if (message.version == 3){
+	if (message.version === 3) {
+		if (message.content.startsWith("https://img3"))
+			message.content = message.content.split("//img3").join("//img4");
 		const meta = await pingContentUrl(message.content);
 		if (!meta) return "No head?";
 		
@@ -432,114 +349,102 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		}
 		return report;
 	}
+	if (message.version === 4) {
+
+	}
 	
 	return "WTF is that message version, how did you pass validation";
 }
 
-export default async function handler(request, response) {
-	if (request.method != "POST" || !request.body){
-		response.status(400).send("Malformed request. Content-Type header and POST required.");
-		return;
-	}
-	if (!schema[request.body?.action]){
-		response.status(400).send(`Unknown action: ${request.body?.action}\nRqBody: ${JSON.stringify(request.body)}`);
-		return;
-	}
-	const validationErrors = validate(request.body, schema[request.body.action]);
-	if (validationErrors.length > 0){
-		response.status(400).send(validationErrors);
-		return;
-	}
-	if (request.body.userToken) request.body.userToken = hashPassword(request.body.userToken);
+export default async function handler(request) {
+	if (!request)
+		return [400, "Malformed request. Content-Type header and POST required."];
+	if (!schema[request.action])
+		return [400, `Unknown action: ${request?.action}\nRqBody: ${JSON.stringify(request)}`];
+
+	const validationErrors = validate(request, schema[request.action]);
+	if (validationErrors.length > 0)
+		return [400, validationErrors];
+
+	if (request.userToken) request.userToken = hashPassword(request.userToken);
 
 	const PUBLIC_ACTIONS = ["debug", "login"];
 
-	if (!PUBLIC_ACTIONS.includes(request.body.action)){
-		if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-			response.status(401).send("Wrong user id or access token");
-			return;
-		}
-	}
+	if (!(
+		PUBLIC_ACTIONS.includes(request.action) ||
+		await userAccessAllowed(request.user, request.userToken)
+	))
+		return [401, "Wrong user id or access token"];
 
-	switch (request.body.action){
+	switch (request.action){
 		case ("debug"): {
-			response.status(200).send();
-			return;
+			return [200]
 		}
 		case ("login"): {
-			const userData = await sql`select * from users where id = ${request.body.user}`;
-			if (userData?.length > 0 && (userData[0]["access_token"] == request.body.userToken || userData[0]["access_token"] == null)){
+			const userData = await sql`select * from users where id = ${request.user}`;
+			if (userData?.length > 0 && (userData[0]["access_token"] == request.userToken || userData[0]["access_token"] == null)){
 				userData[0]["access_token"] = null;
 
 				const [moderables, stats] = await Promise.all([
-					getModerables(request.body.user),
-					getStats(request.body.user)
+					getModerables(request.user),
+					getStats(request.user)
 				]);
 				userData[0].moderables = moderables;
 				userData[0].stats = stats;
-				response.status(200).send(userData[0]);
+				return [200, userData[0]]
 			} else {
-				response.status(401).send();
+				return [401]
 			}
-			return;
 		}
 		case ("saveSettings"): {
 			const delta = {
-				additional: request.body.additionalData
+				additional: request.additionalData
 			};
-			if (request.body.newUserToken) delta.access_token = hashPassword(request.body.newUserToken);
-			if (request.body.newTgToken) delta.tg_token = request.body.newTgToken;
+			if (request.newUserToken) delta.access_token = hashPassword(request.newUserToken);
+			if (request.newTgToken) delta.tg_token = request.newTgToken;
 			
-			await sql`update users set ${sql(delta)} where id = ${request.body.user}`;
-			response.status(200).send();
-			return;
+			await sql`update users set ${sql(delta)} where id = ${request.user}`;
+			return [200];
 		}
 		case ("getGrabbers"): {
-			const grabs = await getGrabbers(request.body.user);
-			if (grabs)
-				response.status(200).send(grabs);
-			else
-				response.status(401).send("Wrong user id or access token");
-			return;
+			const grabs = await getGrabbers(request.user);
+			return (grabs
+				? [200, grabs]
+				: [401, "Wrong user id or access token"]
+			);
 		}
 		case ("grab"): {
-			const newCount = await grab(request.body.user, request.body.id, request.body.batchSize);
-			response.status(200).send(`${newCount}`);
-			return;
+			const newCount = await grab(request.user, request.id, request.batchSize);
+			return [200, `${newCount}`];
 		}
 		case ("setGrabbers"): {
-			const success = await setGrabbers(request.body.user, request.body.grabbers);
-			response.status(success ? 200 : 401).send();
-			return;
+			const success = await setGrabbers(request.user, request.grabbers);
+			return [success ? 200 : 401];
 		}
 		case ("getModerables"): {
-			const messages = await getModerables(request.body.user);
-			response.status(200).send(messages);
-			return;
+			const messages = await getModerables(request.user);
+			return [200, messages];
 		}
 		case ("getPool"): {
-			const rows = await getApproved(request.body.user);
-			response.status(200).send(rows);
-			return;
+			const rows = await getApproved(request.user);
+			return [200, rows]
 		}
 		case ("getPoolPage"): {
-			const stride = request.body.stride || 100;
-			const page = request.body.page;
-			const rows = await getApproved(request.body.user, stride, page * stride);
-			response.status(200).send(rows);
-			return;
+			const stride = request.stride || 100;
+			const page = request.page;
+			const rows = await getApproved(request.user, stride, page * stride);
+			return [200, rows]
 		}
 		case ("wipePool"): {
-			const re = sql`delete from "pool" where "user" = ${request.body.user}`
-			response.status(200).send();
-			return;
+			const re = sql`delete from "pool" where "user" = ${request.user}`
+			return [200]
 		}
 		case ("moderate"): {
 			const decisionSchema = {
 				id: "number",
 				approved: "boolean"
 			};
-			const decisions = request.body.decisions
+			const decisions = request.decisions
 				.filter(d => validate(d, decisionSchema).length == 0)
 				.map(({id, approved}) => [id, approved]);
 			
@@ -553,76 +458,70 @@ export default async function handler(request, response) {
 			const newModerables = await sql`
 				select *
 					from "pool"
-					where "user" = ${request.body.user} and "approved" is null
+					where "user" = ${request.user} and "approved" is null
 					limit 200
 			`;
 
-			response.status(200).send(newModerables);
-			return;
+			return [200, newModerables]
 		}
 		case ("unschedulePost"): {
 			await sql`
 				delete
 					from "pool"
-					where "user" = ${request.body.user} and "id" = ${request.body.id}
+					where "user" = ${request.user} and "id" = ${request.id}
 			`;
-			response.status(200).send();
-			return;
+			return [200];
 		}
 		case ("unfailPost"): {
 			const entry = {
-				id: request.body.id,
+				id: request.id,
 				failed: false
 			}
 			await sql`
 				update "pool"
 					set ${sql(entry, "failed")}
-					where "id" = ${request.body.id}
+					where "id" = ${request.id}
 			`;
-			response.status(200).send();
-			return;
+			return [200];
 		}
 		case ("backup"): {
-			const users = await sql`select * from users`;
-			const pool = await sql`select * from pool`;
+			// const users = await sql`select * from users`;
+			// const pool = await sql`select * from pool`;
+			// pool[0]
 			//console.log(await tgReport(table));
-			response.status(200).send({users, pool});
-			return;
+			// response.status(200).send({pool});
+			return [400];
 		}
 		case ("publish"): {
-			const flags = request.body.flags?.map(f => f.trim().toLowerCase()) || [];
+			const flags = request.flags?.map(f => f.trim().toLowerCase()) || [];
 
-			const target = parseTelegramTarget(request.body.target);
-			if (!target && !flags.includes(PUB_FLAGS.URL_AS_TARGET)){
-				response.status(400).send("Can't parse telegram target");
-				return;
-			}
-			const count = request.body.count || 1;
+			const target = parseTelegramTarget(request.target);
+			if (!target && !flags.includes(PUB_FLAGS.URL_AS_TARGET))
+				return [400, "Can't parse telegram target"]
+			const count = request.count || 1;
 
 			let availablePosts = await sql`
 				select pool.*, users.tg_token
 					from pool inner join users on pool."user" = users."id"
 					where
-						pool."user" = ${request.body.user}
+						pool."user" = ${request.user}
 						and pool."approved" = true
-						${request.body.id
-							? sql`and pool."id" = ${request.body.id}`
+						${request.id
+							? sql`and pool."id" = ${request.id}`
 							: sql`and pool."failed" = false`
 						}
 					order by random()
 					limit ${count * 2}
 			`;
 
-			if (availablePosts.length == 0){
-				response.status(404).send("No scheduled posts for this user");
-				return;
-			}
+			if (availablePosts.length == 0)
+				return [404, "No scheduled posts for this user"];
 
 			let doubleTapFuze = true;
 			for (let tasksLeft = count; tasksLeft > 0; --tasksLeft){
 				if (availablePosts.length === 0) break;
 				const post = availablePosts.pop();
-				const error = await publish2Telegram(post.message, post.tg_token, target, request.body.extras, flags);
+				const error = await publish2Telegram(post.message, post.tg_token, target, request.extras, flags);
 
 				if (error){
 					if (flags.includes(PUB_FLAGS.DOUBLE_TAP) && availablePosts.length > 0 && doubleTapFuze){
@@ -640,12 +539,10 @@ export default async function handler(request, response) {
 				}
 			}
 
-			response.status(200).send();
-			return;
+			return [200];
 		}
 		default: {
-			response.status(400).send("Malformed request");
-			return;
+			return [400, "Malformed request"]
 		}
 	}
 }
