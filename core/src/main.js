@@ -23,7 +23,9 @@ const PUB_FLAGS = {
 	//NO_SIZE_LIMIT: "nosizelimit",
 	KEEP_AFTER_POST: "keep",
 	MARKDOWN_LINKS: "markdownlinks",
-	DOUBLE_TAP: "doubletap"
+	DOUBLE_TAP: "doubletap",
+	NSFW_ONLY: "nsfw",
+	SFW_ONLY: "sfw",
 };
 const imageProxy = url => `https://prinzeugen.fokses.pro/imageproxy?url=${url}&randomize=${Math.random()}`;
 
@@ -492,11 +494,6 @@ export default async function handler(request) {
 			return [200];
 		}
 		case ("backup"): {
-			// const users = await sql`select * from users`;
-			// const pool = await sql`select * from pool`;
-			// pool[0]
-			//console.log(await tgReport(table));
-			// response.status(200).send({pool});
 			return [400];
 		}
 		case ("publish"): {
@@ -506,6 +503,12 @@ export default async function handler(request) {
 			if (!target && !flags.includes(PUB_FLAGS.URL_AS_TARGET))
 				return [400, "Can't parse telegram target"]
 			const count = request.count || 1;
+			const ratingFilter = flags.includes(PUB_FLAGS.SFW_ONLY)
+				? "sfw"
+				: flags.includes(PUB_FLAGS.NSFW_ONLY)
+					? "nsfw"
+					: null;
+			
 
 			let availablePosts = await sql`
 				select pool.*, users.tg_token
@@ -516,6 +519,18 @@ export default async function handler(request) {
 						${request.id
 							? sql`and pool."id" = ${request.id}`
 							: sql`and pool."failed" = false`
+						}
+						${ratingFilter !== null
+							? ratingFilter === "nsfw"
+								? sql`
+									and (pool."message"->>'version')::int = 4
+									and (pool."message"->>'nsfw')::boolean = true
+								`
+								: sql`
+									and (pool."message"->>'version')::int = 4
+									and (pool."message"->>'nsfw')::boolean = false
+								`
+							: sql``
 						}
 					order by random()
 					limit ${count * 2}
