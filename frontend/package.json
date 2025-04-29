@@ -1,0 +1,12 @@
+{
+  "type": "module",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "esbuild": "0.20.0"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --sourcemap         --outfile=dist/ts/index.js",
+    "watch": "esbuild src/main.ts --bundle --sourcemap --watch --outfile=dist/ts/index.js"
+  }
+}

@@ -28,7 +28,7 @@ export function displayModerables(messages: any[]){
 }
 
 function renderModerable(message: any, id: string){
-	if (message.version != 3){
+	if (message.version != 3 && message.version != 4){
 		console.error("Unsupported message version");
 		return;
 	}

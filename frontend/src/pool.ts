@@ -34,6 +34,8 @@ export async function loadMessagePool(page = 0){
 			img.src = row.message.raw?.preview || row.message.image[0];
 		} else if (row.message.version == 3) {
 			img.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
+		} else if (row.message.version == 4) {
+			img.src = row.message.preview;
 		} else {
 			img.src = PLACEHOLDER_URL;
 		}
@@ -60,7 +62,7 @@ function setPreviewPost(row: any){
 	const picture = dialog.querySelector("img");
 	if (!picture) return;
 
-	if (row.message.version == 3){
+	if (row.message.version == 3 || row.message.version == 4){
 		picture.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
 	} else {
 		picture.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
