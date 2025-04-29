@@ -35,6 +35,7 @@ async function filterArtists(allTags: string[], u: number, t: string): Promise<n
 	function countBlanks(responses: any) {
 		return responses.filter(isBlank).length;
 	}
+	if (allTags.length === 0) return [];
 
 	let firstResponse = await phetchTagsPage(0);
 	if (isBlank(firstResponse)) return null;
@@ -109,6 +110,7 @@ async function gelbooruPosts(
 	});
 
 	const url = `https://gelbooru.com/index.php?${params}`;
+	console.log("call", url);
 	const response = await fetch(url);
 	const payload = safeParse(await response.text()) || {};
 	const posts: ParsedPost[] = (payload?.post || []).map((raw: any) => parse(raw, tags));
