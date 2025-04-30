@@ -84,7 +84,7 @@ function parse(post: any, tags: string[]) {
 		source: post.source?.startsWith("http") ? (post.source as string) : null,
 		tags: post.tags.split(" ") as string[],
 		rating: post.score as number,
-		nsfw: !(post.rating == "general" || post.rating == "sensitive"),
+		nsfw: !(post.rating == "general"),
 		artists: tags.filter(a => post.tags.includes(a))
 	}
 }
