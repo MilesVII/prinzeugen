@@ -85,6 +85,7 @@ function parse(post: any, tags: string[]) {
 		tags: post.tags.split(" ") as string[],
 		rating: post.score as number,
 		nsfw: !(post.rating == "general"),
+		glbRating: post.rating,
 		artists: tags.filter(a => post.tags.includes(a))
 	}
 }

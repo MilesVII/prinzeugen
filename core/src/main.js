@@ -27,7 +27,7 @@ const PUB_FLAGS = {
 	NSFW_ONLY: "nsfw",
 	SFW_ONLY: "sfw",
 };
-const imageProxy = url => `https://prinzeugen.fokses.pro/imageproxy?url=${url}&randomize=${Math.random()}`;
+const imageProxy = url => `https://prinzeugen.fokses.pro/resize?source=${encodeURIComponent(url)}&randomize=${Math.random()}`;
 
 const authSchema = {
 	user: "number",
@@ -359,6 +359,10 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		report.direct = await metaSand(meta.type, message.content, message.links);
 		if (safeParse(report.direct)?.ok) return null;
 
+		if (meta.type == "img") {
+			report.proxy = await metaSand(meta.type, imageProxy(message.content), message.links);
+			if (safeParse(report.proxy)?.ok) return null;
+		}
 		return report;
 	}
 	
@@ -551,7 +555,7 @@ export default async function handler(request) {
 						doubleTapFuze = false;
 					}
 					await Promise.allSettled([
-						tgReport(`Failed to publish post #${post.id}.\nResponse:\n${JSON.stringify(error)}`),
+						tgReport(`Failed to publish post #${post.id}.\nResponse:\n${JSON.stringify(error, null, "\t")}`),
 						sql`update pool set ${sql({failed: true})} where id = ${post.id}`
 					]);
 				} else {
