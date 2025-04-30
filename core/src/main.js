@@ -359,10 +359,13 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		report.direct = await metaSand(meta.type, message.content, message.links);
 		if (safeParse(report.direct)?.ok) return null;
 
-		if (meta.type == "img") {
-			report.proxy = await metaSand(meta.type, imageProxy(message.content), message.links);
-			if (safeParse(report.proxy)?.ok) return null;
-		}
+		report.proxy = await metaSand(
+			meta.type == "img" ? "img" : "vid",
+			imageProxy(message.content),
+			message.links
+		);
+		if (safeParse(report.proxy)?.ok) return null;
+
 		return report;
 	}
 	
