@@ -47,7 +47,7 @@ const schema = {
 	setGrabbers: {
 		...authSchema,
 		grabbers: ARRAY_OF([
-			DYNAMIC(x => grabbers[x?.type]?.configSchema)
+			DYNAMIC(x => grabbersMeta[x?.type]?.configSchema)
 		])
 	},
 	getGrabbers: {
