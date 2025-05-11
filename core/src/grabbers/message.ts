@@ -30,6 +30,7 @@ type MessageV4 = {
 	tags?: string[],
 	artists?: string[],
 	nsfw: boolean,
+	rating: "safe" | "suggestive" | "explicit",
 	content: string, // At the moment of grabbing
 	preview: string,
 	reference: string,

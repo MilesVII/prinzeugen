@@ -139,6 +139,13 @@ function postToMessage(post: ParsedPost): Message {
 		tags: post.tags,
 		artists: post.artists,
 		nsfw: post.nsfw,
+		rating: post.glbRating === "general"
+			? "safe"
+			: post.glbRating === "sensitive"
+				? "suggestive"
+				: "explicit",
+		// @ts-ignore
+		glbRating: post.glbRating,
 		content: post.links[0]!,
 		preview: post.preview!,
 		reference: `${post.id}`,
