@@ -531,7 +531,7 @@ export default async function handler(request) {
 							? ratingFilter === "nsfw"
 								? sql`
 									and (pool."message"->>'version')::int = 4
-									and (pool."message"->>'nsfw')::boolean = true
+									and (pool."message"->>'rating') = 'explicit'
 								`
 								: sql`
 									and (pool."message"->>'version')::int = 4
