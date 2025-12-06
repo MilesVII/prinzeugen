@@ -515,13 +515,18 @@ export default async function handler(request) {
 				: flags.includes(PUB_FLAGS.NSFW_ONLY)
 					? "nsfw"
 					: null;
-			
 
 			let availablePosts = await sql`
 				select pool.*, users.tg_token
 					from pool inner join users on pool."user" = users."id"
 					where
 						pool."user" = ${request.user}
+						and not exists (
+							select 1
+							from published_logs l
+							where l.post_id = pool.id
+								and l.target = ${String(target)}
+						)
 						and pool."approved" = true
 						${request.id
 							? sql`and pool."id" = ${request.id}`
@@ -562,7 +567,13 @@ export default async function handler(request) {
 						sql`update pool set ${sql({failed: true})} where id = ${post.id}`
 					]);
 				} else {
-					if (!flags.includes(PUB_FLAGS.KEEP_AFTER_POST)){
+					if (flags.includes(PUB_FLAGS.KEEP_AFTER_POST)) {
+						await sql`insert into published_logs ${sql({
+							post_id: post.id,
+							target: String(target)
+						})}`;
+					} else {
+						await sql`delete from published_logs where post_id = ${post.id}`;
 						await sql`delete from pool where id = ${post.id}`;
 					}
 				}
