@@ -330,8 +330,8 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return report;
 	}
 	if (message.version === 3) {
-		if (message.content.startsWith("https://img3"))
-			message.content = message.content.split("//img3").join("//img4");
+		if (message.content.startsWith("https://img4"))
+			message.content = message.content.split("//img4").join("//img2");
 		const meta = await pingContentUrl(message.content);
 		if (!meta) return "No head?";
 		
@@ -351,9 +351,15 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return report;
 	}
 	if (message.version === 4) {
+		// version 4 is grabber-reliant posting, but retrieving the grabber credentials
+		// is troublesome since it should be linked to the user directly, not the
+		// grabber config
+		if (message.content.startsWith("https://img4"))
+			message.content = message.content.split("//img4").join("//img2");
+
 		const meta = await pingContentUrl(message.content);
 		if (!meta) return "No head?";
-		
+
 		const report = {};
 
 		report.direct = await metaSand(meta.type, message.content, message.links);
