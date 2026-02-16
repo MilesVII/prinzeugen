@@ -1,3 +1,3 @@
-core/configProvider.js
+core/src/upgrade.js
 frontend/dist/ts
 node_modules
