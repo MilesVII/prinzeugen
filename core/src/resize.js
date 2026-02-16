@@ -10,7 +10,7 @@ export async function resize(bytes, meta, [w, h] = [1280, 1280]) {
 
 	const ffmpeg = Bun.spawn(
 		[
-			"ffmpeg", 
+			"ffmpeg",
 			"-i", "pipe:0",
 			"-vf", `scale=iw*min(1\\,min(${w}/iw\\,${h}/ih)):-1`,
 			...(meta.isImage ? imageFlags : videoFlags),

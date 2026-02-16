@@ -231,7 +231,7 @@ async function pingContentUrl(url){
 		type = "gif";
 	else
 		type = "vid";
-	
+
 	return {
 		length: parseInt(meta.headers["content-length"] || "0", 10),
 		type: type
@@ -332,9 +332,10 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 	if (message.version === 3) {
 		if (message.content.startsWith("https://img4"))
 			message.content = message.content.split("//img4").join("//img2");
-		const meta = await pingContentUrl(message.content);
-		if (!meta) return "No head?";
-		
+		// const meta = await pingContentUrl(message.content);
+		// if (!meta) return "No head?";
+		const meta = { type: "img" };
+
 		const report = {};
 
 		report.direct = await metaSand(meta.type, message.content, message.links);
@@ -351,14 +352,13 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return report;
 	}
 	if (message.version === 4) {
-		// version 4 is grabber-reliant posting, but retrieving the grabber credentials
-		// is troublesome since it should be linked to the user directly, not the
-		// grabber config
 		if (message.content.startsWith("https://img4"))
 			message.content = message.content.split("//img4").join("//img2");
 
-		const meta = await pingContentUrl(message.content);
-		if (!meta) return "No head?";
+		// const meta = await pingContentUrl(message.content);
+		// if (!meta) return "No head?";
+		// there's some redirect bullshit going on currently
+		const meta = { type: "img" };
 
 		const report = {};
 
@@ -372,9 +372,11 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		);
 		if (safeParse(report.proxy)?.ok) return null;
 
+		report.url = message.content;
+
 		return report;
 	}
-	
+
 	return "WTF is that message version, how did you pass validation";
 }
 
