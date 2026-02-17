@@ -220,8 +220,13 @@ async function userAccessAllowed(id, token){
 }
 
 async function pingContentUrl(url){
-	const meta = await phetchV2(url, {method: "HEAD"});
-	if (meta.status != 200) return null;
+	const response = await fetch(url, {
+		method: "HEAD",
+		headers: {
+			"Referer": "https://gelbooru.com/"
+		}
+	});
+	if (!response.ok) return null;
 
 	const typeRaw = meta.headers["content-type"] || "image/dunno";
 	let type;
@@ -235,7 +240,7 @@ async function pingContentUrl(url){
 	return {
 		length: parseInt(meta.headers["content-length"] || "0", 10),
 		type: type
-	}
+	};
 }
 
 function linksToMarkdown(links){
@@ -332,9 +337,8 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 	if (message.version === 3) {
 		if (message.content.startsWith("https://img4"))
 			message.content = message.content.split("//img4").join("//img2");
-		// const meta = await pingContentUrl(message.content);
-		// if (!meta) return "No head?";
-		const meta = { type: "img" };
+		const meta = await pingContentUrl(message.content);
+		if (!meta) return "No head?";
 
 		const report = {};
 
@@ -355,10 +359,8 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		if (message.content.startsWith("https://img4"))
 			message.content = message.content.split("//img4").join("//img2");
 
-		// const meta = await pingContentUrl(message.content);
-		// if (!meta) return "No head?";
-		// there's some redirect bullshit going on currently
-		const meta = { type: "img" };
+		const meta = await pingContentUrl(message.content);
+		if (!meta) return "No head?";
 
 		const report = {};
 

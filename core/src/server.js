@@ -44,13 +44,20 @@ const server = Bun.serve({
 			const source = url.searchParams.get("source");
 			if (!source) return new Response(null, { status: 400, headers: cors });
 
-			const response = await fetch(decodeURIComponent(source));
+			const response = await fetch(
+				decodeURIComponent(source),
+				{
+					headers: {
+						"Referer": "https://gelbooru.com/"
+					}
+				}
+			);
 			if (!response.ok) return new Response(null, { status: 502, headers: cors });
 
 			const bytes = await response.arrayBuffer();
 			const mime = response.headers.get("Content-Type");
 			const format = detectFormat(mime);
-			if (!format) return Response(null, { status:415, headers: cors });
+			if (!format) return new Response(null, { status:415, headers: cors });
 
 			const resized = await resize(bytes, format);
 
