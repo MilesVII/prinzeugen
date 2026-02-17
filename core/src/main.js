@@ -228,7 +228,7 @@ async function pingContentUrl(url){
 	});
 	if (!response.ok) return null;
 
-	const typeRaw = meta.headers["content-type"] || "image/dunno";
+	const typeRaw = response.headers["content-type"] || "image/dunno";
 	let type;
 	if (typeRaw.startsWith("image/") && typeRaw != "image/gif")
 		type = "img";
@@ -238,7 +238,7 @@ async function pingContentUrl(url){
 		type = "vid";
 
 	return {
-		length: parseInt(meta.headers["content-length"] || "0", 10),
+		length: parseInt(response.headers["content-length"] || "0", 10),
 		type: type
 	};
 }
