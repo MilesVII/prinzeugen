@@ -228,7 +228,7 @@ async function pingContentUrl(url){
 	});
 	if (!response.ok) return null;
 
-	const typeRaw = response.headers["content-type"] || "image/dunno";
+	const typeRaw = response.headers.get("content-type") || "image/dunno";
 	let type;
 	if (typeRaw.startsWith("image/") && typeRaw != "image/gif")
 		type = "img";
