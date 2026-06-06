@@ -14,6 +14,14 @@ const server = Bun.serve({
 	development: {
 		hmr: false
 	},
+	error(e) {
+		return new Response(`${Object.entries(e).map(([k, v]) => `${k}: ${v}`).join("\n")};`, {
+			status: 500,
+			headers: {
+				"Content-Type": "text/plain",
+			},
+		});
+	},
 	fetch: async (request) => {
 		const url = new URL(request.url);
 		if (request.method === "OPTIONS") {

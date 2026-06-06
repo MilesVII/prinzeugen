@@ -101,12 +101,12 @@ async function artistPostCount(artist: string): Promise<PostCount["count"]> {
 		tags: artist,
 		pid: "0",
 		json: "1",
-		limit: "0"
+		limit: "0",
 		// api_key: grabber.credentials.token,
 		// user_id: grabber.credentials.user
 	});
 	const url = `gelbooru.com/index.php?${params}`;
-	const proxied = `https://prinzeugen.fokses.pro/proxie/${url}`;
+	const proxied = `https://prinzeugen.fokses.website/proxie/${url}`;
 
 	const response = await fetch(proxied);
 

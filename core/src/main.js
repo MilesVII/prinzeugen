@@ -27,7 +27,7 @@ const PUB_FLAGS = {
 	NSFW_ONLY: "nsfw",
 	SFW_ONLY: "sfw",
 };
-const imageProxy = url => `https://prinzeugen.fokses.pro/resize?source=${encodeURIComponent(url)}&randomize=${Math.random()}`;
+const imageProxy = url => `https://prinzeugen.fokses.website/resize?source=${encodeURIComponent(url)}&randomize=${Math.random()}`;
 
 const authSchema = {
 	user: "number",

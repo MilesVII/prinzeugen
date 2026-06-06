@@ -158,3 +158,19 @@ export function escapeMarkdown(raw){
 export function pickRandom(array, random = Math.random()) {
 	return array[Math.floor(array.length * random)]
 }
+
+export function nothrow(cb) {
+	try {
+		return { success: true, value: cb() };
+	} catch (error) {
+		return { success: false, error };
+	}
+}
+
+export function nothrowAsync(cb) {
+	return new Promise(resolve => {
+		cb
+			.then(value => resolve({ success: true, value }))
+			.catch(error => resolve({ success: false, error }))
+	});
+}
