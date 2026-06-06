@@ -1,5 +1,6 @@
 import { validate, ARRAY_OF, OPTIONAL, DYNAMIC, ANY_OF } from "arstotzka";
 import postgres from "postgres";
+import { felch } from "./utils.js";
 
 import {
 	chunk,
@@ -220,7 +221,7 @@ async function userAccessAllowed(id, token){
 }
 
 async function pingContentUrl(url){
-	const response = await fetch(url, {
+	const response = await felch(url, {
 		method: "HEAD",
 		headers: {
 			"Referer": "https://gelbooru.com/"
@@ -335,10 +336,11 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return report;
 	}
 	if (message.version === 3) {
-		if (message.content.startsWith("https://img4"))
-			message.content = message.content.split("//img4").join("//img2");
+		message.content = message.content.replace("https://img4", "https://img2");
+		message.content = message.content.replace(/video-cdn.\./g, "video-cdn4.");
+
 		const meta = await pingContentUrl(message.content);
-		if (!meta) return "No head?";
+		if (!meta) return `No head?\n${message.content}`;
 
 		const report = {};
 
@@ -356,11 +358,11 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		return report;
 	}
 	if (message.version === 4) {
-		if (message.content.startsWith("https://img4"))
-			message.content = message.content.split("//img4").join("//img2");
+		message.content = message.content.replace("https://img4", "https://img2");
+		message.content = message.content.replace(/video-cdn.\./g, "video-cdn4.");
 
 		const meta = await pingContentUrl(message.content);
-		if (!meta) return "No head?";
+		if (!meta) return `No head?\n${message.content}`;
 
 		const report = {};
 
@@ -572,10 +574,14 @@ export default async function handler(request) {
 						++tasksLeft;
 						doubleTapFuze = false;
 					}
-					await Promise.allSettled([
-						tgReport(`Failed to publish post #${post.id}.\nResponse:\n${JSON.stringify(error, null, "\t")}`),
-						sql`update pool set ${sql({failed: true})} where id = ${post.id}`
-					]);
+					if (typeof error === "string" && error.startsWith("No head")) {
+						await tgReport(`Failed to publish post #${post.id}.\nResponse:\n${error}`);
+					} else {
+						await Promise.allSettled([
+							tgReport(`Failed to publish post #${post.id}.\nResponse:\n${JSON.stringify(error, null, "\t")}`),
+							sql`update pool set ${sql({failed: true})} where id = ${post.id}`
+						]);
+					}
 				} else {
 					if (flags.includes(PUB_FLAGS.KEEP_AFTER_POST)) {
 						await sql`insert into published_logs ${sql({

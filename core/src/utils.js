@@ -1,5 +1,6 @@
 import * as https from "https";
 import { pbkdf2Sync } from "node:crypto";
+import { fetch as nbFetch } from "netbun";
 
 export function hashPassword(raw){
 	const key = pbkdf2Sync(raw, "m1ku39", 7000, 64, "sha512");
@@ -172,5 +173,13 @@ export function nothrowAsync(cb) {
 		cb
 			.then(value => resolve({ success: true, value }))
 			.catch(error => resolve({ success: false, error }))
+	});
+}
+
+export function felch(url, params = {}) {
+	
+	return nbFetch(url, {
+		...params,
+		proxy: "socks5://127.0.0.1:9050",
 	});
 }

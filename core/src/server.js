@@ -1,5 +1,6 @@
 import handler from "./main";
 import { resize, detectFormat } from "./resize";
+import { felch } from "./utils.js";
 
 const index = Bun.file("../frontend/dist/index.html");
 const cors = {
@@ -52,7 +53,7 @@ const server = Bun.serve({
 			const source = url.searchParams.get("source");
 			if (!source) return new Response(null, { status: 400, headers: cors });
 
-			const response = await fetch(
+			const response = await felch(
 				decodeURIComponent(source),
 				{
 					headers: {

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "arstotzka": "^0.13.3",
+    "netbun": "^0.4.1",
     "postgres": "^3.4.5"
   }
 }
