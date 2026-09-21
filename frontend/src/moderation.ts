@@ -48,7 +48,7 @@ function renderModerable(message: any, id: string){
 	const link = proto.querySelector("a");
 	if (link) link.href = source;
 	const image = proto.querySelector("img");
-	if (image) image.src = preview;
+	// if (image) image.src = preview;
 
 	function renderTag(text: string, color: string){
 		const e = document.createElement("div");

@@ -19,9 +19,7 @@ async function upscale(t: UpscaleTask, abortSignal: AbortSignal, e: HTMLElement,
 	if (e.dataset.upscaled && retriesLeft === UPSCALE_RETRY_COUNT) return;
 
 	e.dataset.upscaled = "weewee";
-
-	// const url = `/proxy?url=${e.dataset.original}`;
-	const url = `http://localhost/proxy?url=${e.dataset.original}`;
+	const url = `http://localhost/proxy?id=${e.dataset.id}`;
 
 	const response = await fetch(url, { signal: abortSignal });
 	if (t.aborted) return;
