@@ -43,7 +43,12 @@ async function filterArtists(allTags: string[], u: number, t: string): Promise<n
 	const pageCount = Math.ceil(firstResponse["@attributes"].count / firstResponse["@attributes"].limit)
 	const pageRange: number[] = range(1, pageCount);
 
-	const additionals = await Promise.all(pageRange.map(page => phetchTagsPage(page)));
+	const additionals = [];
+	for (const page of pageRange) {
+		additionals.push(await phetchTagsPage(page));
+		await sleep(420);
+	}
+
 	for (
 		let tries = 0;
 		tries < 3 && countBlanks(additionals) > 0;
