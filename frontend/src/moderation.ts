@@ -38,6 +38,7 @@ function renderModerable(message: any, id: string){
 
 	proto.dataset.id = id;
 	proto.dataset.original = message.content;
+	proto.dataset.ref = message.reference;
 	if (message.cached) proto.dataset.upscaled = "weewee";
 
 	proto.addEventListener("click", () => proto.focus());
