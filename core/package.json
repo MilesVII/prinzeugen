@@ -2,7 +2,8 @@
   "name": "core",
   "private": true,
   "scripts": {
-    "start": "bun run src/server.js"
+    "start": "bun run src/server.js",
+    "proxy": "bun run local-proxy/server.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
