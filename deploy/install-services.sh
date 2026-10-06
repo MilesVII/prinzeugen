@@ -28,6 +28,10 @@ sudo systemctl enable --now prinzeugen-backup.timer
 sudo systemctl restart prinzeugen.service
 
 echo
+if [ ! -f "$APP_DIR/frontend/dist/index.html" ]; then
+	echo "WARNING: no frontend build at frontend/dist. Run 'bun run build' and 'sudo systemctl restart prinzeugen'."
+	echo
+fi
 sudo systemctl --no-pager --lines=3 status prinzeugen.service || true
 echo
 sudo systemctl list-timers prinzeugen-backup.timer --no-pager

@@ -96,9 +96,12 @@ export const app = new Elysia()
 	})
 
 	// Static frontend with SPA fallback
-	.get("/*", async ({ path }) => {
+	.get("/*", async ({ path, status }) => {
 		const file = staticFile(path);
 		if (file && await file.exists() && (await file.stat()).isFile()) return file;
+		// returning a BunFile that does not exist fails inside Bun after the error hook, so check first
+		if (!(await INDEX.exists()))
+			return status(503, `Frontend is not built. Run "bun run build" in the repository root and restart the service.`);
 		return INDEX;
 	});
 

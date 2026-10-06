@@ -50,6 +50,8 @@ sudo certbot --nginx -d dash.example.com
 
 Later releases: `./deploy/deploy.sh` (pull, install, build, migrate, restart).
 
+If you wire things up by hand instead, remember `bun run build`: the server serves `frontend/dist`, which is not committed. Without it every page answers 503 "Frontend is not built".
+
 Set `OUTBOUND_PROXY=socks5://127.0.0.1:9050` in `.env` if gelbooru media should be fetched through tor.
 
 ## Auth
