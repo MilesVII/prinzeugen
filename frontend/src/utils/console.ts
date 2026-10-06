@@ -1,24 +1,36 @@
-export function init(){
-	const console = document.querySelector<HTMLElement>(".console");
-	if (!console) return;
+const LABEL = "console";
 
-	console.addEventListener("toggle", () => console.dataset.unread = "0");
+function elements() {
+	const details = document.querySelector<HTMLDetailsElement>("details.console");
+	const summary = details?.querySelector("summary") ?? null;
+	const log = details?.querySelector(":scope > div") ?? null;
+	return { details, summary, log };
 }
 
+function setUnread(count: number) {
+	const { details, summary } = elements();
+	if (!details) return;
+	details.dataset.unread = `${count}`;
+	if (summary) summary.textContent = count > 0 ? `${LABEL} (${count})` : LABEL;
+}
+
+export function init(){
+	const { details } = elements();
+	if (!details) return;
+
+	setUnread(0);
+	details.addEventListener("toggle", () => setUnread(0));
+}
+
+/** Appends a line to the on-page console. Unread lines are counted while it is collapsed. */
 export function report(message: string) {
-	const console = document.querySelector<HTMLDetailsElement>("details.console");
-	if (!console) return;
+	const { details, log } = elements();
+	if (!details || !log) return;
 
-	if (console.dataset.unread === undefined) console.dataset.unread = "0";
-
-	if (!console.open)
-		console.dataset.unread = `${parseInt(console.dataset.unread, 10) + 1}`;
-
-	const contents = console.querySelector("details > div");
-	if (!contents) return;
+	if (!details.open)
+		setUnread(parseInt(details.dataset.unread ?? "0", 10) + 1);
 
 	const entry = document.createElement("div");
 	entry.textContent = message;
-
-	contents.prepend(entry);
+	log.prepend(entry);
 }

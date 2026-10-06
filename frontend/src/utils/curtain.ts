@@ -1,28 +1,23 @@
-
-import { switchTabContent } from "./tabs";
-
 let pageLock = false;
-let nodeStorage: Node | undefined;
 
-export function pullCurtain(lock: boolean, message = "Processing request", noswitch = false){
+/** Shows a blocking overlay. Returns false when one is already up, so callers can bail out. */
+export function pullCurtain(lock: boolean, message = "Processing request"){
+	const curtain = document.querySelector<HTMLElement>("#curtain");
+
 	if (lock){
 		if (pageLock) return false;
 		pageLock = true;
 
-		nodeStorage = switchTabContent("state", "curtain");
-
+		if (curtain) curtain.hidden = false;
 		updateCurtainMessage(message);
 	} else {
 		pageLock = false;
-		
-		if (!noswitch)
-			switchTabContent("state", null, nodeStorage);
-		nodeStorage = undefined;
+		if (curtain) curtain.hidden = true;
 	}
 	return true;
 }
 
 export function updateCurtainMessage(message: string){
-	const curtain = document.querySelector("#curtain");
-	if (curtain) curtain.textContent = message;
+	const label = document.querySelector("#curtain-message");
+	if (label) label.textContent = message;
 }

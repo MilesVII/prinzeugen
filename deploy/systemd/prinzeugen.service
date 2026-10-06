@@ -1,0 +1,18 @@
+[Unit]
+Description=Prinz Eugen dashboard
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__APP_USER__
+WorkingDirectory=__APP_DIR__
+# .env in WorkingDirectory is loaded by bun automatically
+ExecStart=__BUN__ run core/src/server.ts
+Restart=on-failure
+RestartSec=3
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

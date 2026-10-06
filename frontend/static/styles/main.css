@@ -1,0 +1,195 @@
+/* Base styles. Structure and tokens follow aegir's main.css; sizes are fixed px, not viewport units. */
+
+@import url("https://fonts.googleapis.com/css2?family=Ubuntu+Sans:ital,wght@0,400;0,600;1,400&family=Ubuntu+Sans+Mono&display=swap");
+
+@media screen and (min-width: 960px) {
+	:root {
+		--content-width: min(920px, calc(100vw - var(--min-content-pad) * 2));
+	}
+}
+
+@media screen and (max-width: 959.9px) {
+	:root {
+		--content-width: calc(100vw - var(--min-content-pad) * 2);
+	}
+}
+
+:root {
+	color-scheme: only dark;
+
+	--color-base: #171717;
+	--color-base-semi: rgb(23 23 23 / 70%);
+	--color-secondary: #777;
+	--color-subtext: #868686;
+	--color-accent: #DA0037;
+	--color-text: #EDEDED;
+
+	--color-ok: #29DF47;
+	--color-bad: #DA4000;
+
+	--font-smol: normal 400 14px/18px "Ubuntu Sans", system-ui, sans-serif;
+	--font-main: normal 400 17px/22px "Ubuntu Sans", system-ui, sans-serif;
+	--font-bold: normal 600 20px/24px "Ubuntu Sans", system-ui, sans-serif;
+	--font-mono: normal 400 15px/20px "Ubuntu Sans Mono", ui-monospace, monospace;
+
+	--dims-smol:  4px;
+	--dims-reg:   8px;
+	--dims-huge: 16px;
+
+	--min-content-pad: min(16px, 3vw);
+
+	background-color: black;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+
+	font: var(--font-main);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	margin: 0;
+	border: none;
+	overflow: auto;
+	overflow-x: hidden;
+}
+
+body {
+	width: 100%;
+	min-height: 100svh;
+	background-color: var(--color-base);
+	color: var(--color-text);
+}
+
+:not(:defined) {
+	display: none;
+}
+
+a, a:visited {
+	color: var(--color-accent);
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin: 0;
+	line-height: 1em;
+}
+
+img {
+	display: block;
+	max-width: 100%;
+}
+
+hr {
+	width: 100%;
+	border: none;
+	border-top: 2px solid var(--color-secondary);
+	margin: 0;
+}
+
+p {
+	margin: 0;
+}
+
+ul, ol {
+	margin: 0;
+	padding: 0;
+	padding-inline-start: var(--dims-huge);
+}
+
+textarea {
+	resize: vertical;
+	max-height: 60vh;
+	font: var(--font-mono);
+}
+
+input, textarea, select, button {
+	font: inherit;
+	color: inherit;
+}
+input::placeholder, textarea::placeholder {
+	color: var(--color-subtext);
+	opacity: 1;
+}
+
+dialog {
+	width: 100%;
+	height: auto;
+	max-width: none;
+	max-height: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+	background: transparent;
+	outline: none;
+	color: inherit;
+}
+dialog::backdrop {
+	backdrop-filter: blur(16px);
+	background: rgb(0 0 0 / 40%);
+}
+dialog > form {
+	display: flex;
+	margin: auto;
+	width: var(--content-width);
+	max-height: 90svh;
+	overflow-y: auto;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+
+	flex-flow: column nowrap;
+	background: var(--color-base);
+	border-radius: var(--dims-reg);
+	padding: var(--dims-reg);
+	gap: var(--dims-huge);
+
+	border: 2px solid var(--color-accent);
+	box-shadow: 0 0 var(--dims-smol) var(--color-accent);
+}
+
+details > div {
+	padding: var(--dims-reg);
+}
+summary {
+	cursor: pointer;
+}
+
+code {
+	font: var(--font-mono);
+}
+
+pre {
+	white-space: break-spaces;
+	margin: 0;
+}
+
+progress {
+	appearance: none;
+	border: 1px solid var(--color-secondary);
+	height: 4px;
+	border-radius: 1000px;
+	background-color: transparent;
+}
+progress::-webkit-progress-bar {
+	background-color: transparent;
+}
+progress::-webkit-progress-value {
+	background-color: var(--color-accent);
+}
+progress::-moz-progress-bar {
+	background-color: var(--color-accent);
+}
+
+*[hidden] {
+	display: none !important;
+}

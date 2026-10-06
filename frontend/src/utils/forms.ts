@@ -26,7 +26,7 @@ export type PEFieldAdditionals = {
 function fieldFromTemplate(field: FieldSchema<PEFieldAdditionals>){
 	function getProto(id: string) {
 		const raw = fromTemplate(id);
-		const proto = (raw as HTMLElement)?.firstElementChild;
+		const proto = raw?.firstElementChild;
 		if (proto){
 			return proto;
 		} else {

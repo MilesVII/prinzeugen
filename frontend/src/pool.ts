@@ -1,73 +1,64 @@
-import { callAPI, fromTemplate } from "./utils/utils";
+import { api, ok, fromTemplateFirst, el } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
+import type { RampikePagination } from "./components/pagination";
 
 const PLACEHOLDER_URL = "placeholder.png";
-export async function loadMessagePool(page = 0){
-	const STRIDE = 64;
-	const container = document.querySelector("#pool-content");
-	if (!container) return;
+const STRIDE = 64;
 
-	const pager = document.querySelector("#pool-pagination");
-	if (!pager) return;
+export function initPool() {
+	el<RampikePagination>("#pool-pagination")?.addEventListener("pick", e => {
+		loadMessagePool((e as CustomEvent<{ page: number }>).detail.page);
+	});
+}
+
+function previewUrl(message: any) {
+	if (message.version == 1) return message.raw?.preview || message.image?.[0] || PLACEHOLDER_URL;
+	if (message.version == 3) return message.cached ? message.cachedContent.preview : message.preview;
+	if (message.version == 4) return message.preview;
+	return PLACEHOLDER_URL;
+}
+
+export async function loadMessagePool(page = 0){
+	const container = el("#pool-content");
+	const pager = el<RampikePagination>("#pool-pagination");
+	if (!container || !pager) return;
+
+	pullCurtain(true, "Loading pool");
+	const rows = await api.get<any[]>(`/api/pool?page=${page}&stride=${STRIDE}`);
+	pullCurtain(false);
+	if (!ok(rows) || !Array.isArray(rows.data)) return;
 
 	container.innerHTML = "";
-
-	pullCurtain(true);
-	const rows = await callAPI("getPoolPage", {
-		page: page,
-		stride: STRIDE
-	}, true);
-	pullCurtain(false);
-
-	for (let row of rows.data){
-		const proto = (fromTemplate("generic-pool-item") as Element)?.firstElementChild as HTMLElement;
+	for (const row of rows.data){
+		const proto = fromTemplateFirst("generic-pool-item");
 		if (!proto) return;
 
 		proto.dataset.id = row.id;
-		proto.dataset.failed = row.failed;
+		proto.dataset.failed = `${row.failed}`;
 		const img = proto.querySelector("img");
 		if (!img) return;
 
 		img.title = generateTitle(row);
-
-		if (row.message.version == 1){
-			img.src = row.message.raw?.preview || row.message.image[0];
-		} else if (row.message.version == 3) {
-			img.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
-		} else if (row.message.version == 4) {
-			img.src = row.message.preview;
-		} else {
-			img.src = PLACEHOLDER_URL;
-		}
+		img.loading = "lazy";
+		img.src = previewUrl(row.message);
 		proto.addEventListener("click", () => setPreviewPost(row));
 
 		container.append(proto);
 	}
 
-	pager.innerHTML = "";
 	const postCount = rows.data[0]?.total || 0;
-	const pageCount = Math.ceil(postCount / STRIDE);
-	for (let i = 0; i < pageCount; ++i){
-		const pageSelector = document.createElement("button");
-		pageSelector.textContent = `${i + 1}`;
-		pageSelector.addEventListener("click", () => loadMessagePool(i));
-		pager.appendChild(pageSelector);
-	}
+	pager.pageCount = Math.ceil(postCount / STRIDE);
+	pager.page = page;
 }
 
 function setPreviewPost(row: any){
-	const dialog = document.querySelector<HTMLDialogElement>("dialog#pool-preview");
+	const dialog = el<HTMLDialogElement>("dialog#pool-preview");
 	if (!dialog) return;
 
 	const picture = dialog.querySelector("img");
 	if (!picture) return;
 
-	if (row.message.version == 3 || row.message.version == 4){
-		picture.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
-	} else {
-		picture.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
-	}
-
+	picture.src = previewUrl(row.message);
 	picture.title = generateTitle(row);
 
 	const controls = dialog.querySelector("#pool-preview-controls");
@@ -76,38 +67,40 @@ function setPreviewPost(row: any){
 
 	function button(caption: string, action: () => void) {
 		const b = document.createElement("button");
+		b.className = "lineout";
 		b.textContent = caption;
 		b.addEventListener("click", action);
 		return b;
 	}
-	
+
 	const linkset: {text: string, url: string}[] = (row.message?.links || []);
 	const links = linkset.map(link => {
 		const anchor = document.createElement("a");
 		anchor.textContent = link.text;
 		anchor.href = link.url;
-		anchor.classList.add("clickable");
+		anchor.className = "lineout";
 		anchor.target = "_blank";
+		anchor.rel = "noreferrer";
 		return anchor;
 	});
 
 	const tags = ["absurdres", "animated"]
 		.filter(item => row.message?.tags?.includes(item))
 		.map(tag => {
-			const tagProto = (fromTemplate("generic-pool-item-tag") as Element)?.firstElementChild as HTMLElement;
-			if (!tagProto) return null;
-			tagProto.textContent = tag;
-			return tagProto;
-		})
-		.filter(tag => tag) as ChildNode[];
+			const pill = document.createElement("span");
+			pill.className = "tag tag-media";
+			pill.textContent = tag;
+			return pill;
+		});
+
+	const failed = row.failed ? [button("unfail", () => unfailPost(row.id).then(() => dialog.close()))] : [];
 
 	controls.append(
 		...links,
 		...tags,
-		button("Unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
-		...[button("Unfail", () => unfailPost(row.id).then(() => dialog.close()))]
-			.filter(() => row.failed),
-		button("Show item details in console", () => console.log(row))
+		button("unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
+		...failed,
+		button("log details", () => console.log(row))
 	);
 
 	dialog.showModal();
@@ -115,26 +108,22 @@ function setPreviewPost(row: any){
 
 async function unschedulePost(rowId: number){
 	pullCurtain(true);
-	const response = await callAPI("unschedulePost", {
-		id: rowId
-	}, true);
+	const response = await api.del(`/api/pool/${rowId}`);
 	pullCurtain(false);
 
-	if (response.status < 300){
-		const target = document.querySelector(`.pool-item[data-id="${rowId}"]`);
-		if (target) target.classList.add("hidden");
+	if (ok(response)){
+		const target = el(`.pool-item[data-id="${rowId}"]`);
+		if (target) target.hidden = true;
 	}
 }
 
-async function  unfailPost(rowId: number) {
+async function unfailPost(rowId: number) {
 	pullCurtain(true);
-	const response = await callAPI("unfailPost", {
-		id: rowId
-	}, true);
+	const response = await api.post(`/api/pool/${rowId}/unfail`);
 	pullCurtain(false);
 
-	if (response.status < 300){
-		const target = document.querySelector<HTMLElement>(`.pool-item[data-id="${rowId}"]`);
+	if (ok(response)){
+		const target = el(`.pool-item[data-id="${rowId}"]`);
 		if (target) target.dataset.failed = "false";
 	}
 }
@@ -143,5 +132,5 @@ function generateTitle(row: any){
 	return [
 		row.message.artists?.join(" "),
 		row.message.tags?.join(" "),
-	].join("\n");
+	].filter(Boolean).join("\n");
 }

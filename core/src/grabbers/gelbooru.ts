@@ -1,10 +1,28 @@
-import { fetch } from "bun";
-import { last, safeParse, range, sleep } from "../utils.js";
-import type { GelbooruGrabber } from "./index.js";
-import type { Message, TelegramButton } from "./message.js";
+import { t, type Static } from "elysia";
+import { last, safeParse, range, sleep } from "../utils.ts";
+import type { Grabber } from "./index.ts";
+import type { Message, TelegramButton } from "./message.ts";
+
+export const GelbooruConfigSchema = t.Object({
+	type: t.Literal("gelbooru"),
+	credentials: t.Object({
+		user: t.Number(),
+		token: t.String()
+	}),
+	config: t.Object({
+		tags: t.Array(t.String()),
+		whites: t.Array(t.String()),
+		blacks: t.Array(t.String()),
+		moderated: t.Boolean()
+	}),
+	state: t.Object({
+		lastSeen: t.Number()
+	})
+});
+export type GelbooruConfig = Static<typeof GelbooruConfigSchema>;
 
 function button(text: string, url: string): TelegramButton {
-	return { text: text, url: url };
+	return { text, url };
 }
 
 function buildURLParams(params: Record<string, string | number | boolean>) {
@@ -30,20 +48,20 @@ async function filterArtists(allTags: string[], u: number, t: string): Promise<n
 		return safeParse(await response.text()) || {};
 	}
 	function isBlank(r: any) {
-		return !r["@attributes"]
+		return !r["@attributes"];
 	}
-	function countBlanks(responses: any) {
+	function countBlanks(responses: any[]) {
 		return responses.filter(isBlank).length;
 	}
 	if (allTags.length === 0) return [];
 
-	let firstResponse = await phetchTagsPage(0);
+	const firstResponse = await phetchTagsPage(0);
 	if (isBlank(firstResponse)) return null;
-	
-	const pageCount = Math.ceil(firstResponse["@attributes"].count / firstResponse["@attributes"].limit)
+
+	const pageCount = Math.ceil(firstResponse["@attributes"].count / firstResponse["@attributes"].limit);
 	const pageRange: number[] = range(1, pageCount);
 
-	const additionals = [];
+	const additionals: any[] = [];
 	for (const page of pageRange) {
 		additionals.push(await phetchTagsPage(page));
 		await sleep(420);
@@ -55,10 +73,9 @@ async function filterArtists(allTags: string[], u: number, t: string): Promise<n
 		++tries
 	){
 		await sleep(3000);
-		for (let i in additionals){
+		for (let i = 0; i < additionals.length; ++i){
 			if (isBlank(additionals[i])){
-				const p = parseInt(i, 10) + 1;
-				additionals[i] = await phetchTagsPage(p);
+				additionals[i] = await phetchTagsPage(i + 1);
 			}
 		}
 	}
@@ -90,9 +107,9 @@ function parse(post: any, tags: string[]) {
 		tags: post.tags.split(" ") as string[],
 		rating: post.score as number,
 		nsfw: !(post.rating == "general"),
-		glbRating: post.rating,
+		glbRating: post.rating as string,
 		artists: tags.filter(a => post.tags.includes(a))
-	}
+	};
 }
 async function gelbooruPosts(
 	query: { tags: string } | { id: number },
@@ -116,22 +133,16 @@ async function gelbooruPosts(
 	});
 
 	const url = `https://gelbooru.com/index.php?${params}`;
-	console.log("call", url);
 	const response = await fetch(url);
 	const payload = safeParse(await response.text()) || {};
 	const posts: ParsedPost[] = (payload?.post || []).map((raw: any) => parse(raw, tags));
 
-	const allTags = Array.from(
-		new Set(posts
-			.map(p => p.tags)
-			.reduce((p: string[], c) => p.concat(c), [])
-		).values()
-	);
+	const allTags = Array.from(new Set(posts.flatMap(p => p.tags)));
 
 	const allArtists = skipArtists
 		? []
 		: await filterArtists(allTags, user, token);
-	
+
 	if (!allArtists) return [];
 	posts.forEach(p => p.artists = allArtists.filter((a) => p.tags.includes(a)));
 
@@ -149,8 +160,6 @@ function postToMessage(post: ParsedPost): Message {
 			: post.glbRating === "sensitive"
 				? "suggestive"
 				: "explicit",
-		// @ts-ignore
-		glbRating: post.glbRating,
 		content: post.links[0]!,
 		preview: post.preview!,
 		reference: `${post.id}`,
@@ -158,30 +167,16 @@ function postToMessage(post: ParsedPost): Message {
 		links: [
 			button("Gelbooru", post.link),
 			post.source && button("Source", post.source),
-			...post.artists.map((a) => 
+			...post.artists.map((a) =>
 				button(`🎨 ${a}`, `https://gelbooru.com/index.php?page=post&s=list&tags=${a}`)
 			)
 		].filter(l => l) as TelegramButton[]
 	};
 }
 
-export const gelbooruGrabber: GelbooruGrabber = {
+export const gelbooruGrabber: Grabber<GelbooruConfig> = {
 	id: "gelbooru",
-	configSchema: {
-		credentials: {
-			user: "number",
-			token: "string"
-		},
-		config: {
-			tags: "array",
-			whites: "array",
-			blacks: "array",
-			moderated: "boolean"
-		},
-		state: {
-			lastSeen: "number"
-		}
-	},
+	schema: GelbooruConfigSchema,
 	grab: async (grabber, options = {}) => {
 		const lastSeen = grabber.state.lastSeen || 0;
 		const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
@@ -203,7 +198,8 @@ export const gelbooruGrabber: GelbooruGrabber = {
 			options.batchLimit
 		);
 
-		if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
+		const newest = last(posts);
+		if (newest) grabber.state.lastSeen = newest.id;
 
 		return posts.map(postToMessage);
 	},
@@ -215,9 +211,6 @@ export const gelbooruGrabber: GelbooruGrabber = {
 			0,
 			[]
 		);
-		if (posts[0])
-			return postToMessage(posts[0]);
-		else
-			return null;
+		return posts[0] ? postToMessage(posts[0]) : null;
 	}
-}
+};

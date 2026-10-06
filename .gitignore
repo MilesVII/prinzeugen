@@ -1,3 +1,10 @@
-core/src/upgrade.js
-frontend/dist/ts
 node_modules
+frontend/dist
+core/errors
+core/src/upgrade.js
+.env
+*.tsbuildinfo
+.idea
+.DS_Store
+references/
+.claude/

@@ -1,13 +1,10 @@
-import { callAPI, fromTemplate, sleep, chunk } from "./utils/utils";
+import { api, ok, fromTemplateFirst, el } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import { isBusy as upscalerIsBusy, loadTasks, runTasks, flushTasks } from "./utils/upscaler";
 
 export async function downloadModerables(){
-	const messages = await callAPI("getModerables", null, true);
-	if (messages.status == 200)
-		return messages.data;
-	else
-		return null;
+	const messages = await api.get<any[]>("/api/moderables");
+	return ok(messages) ? messages.data : null;
 }
 
 export async function reloadModerables(){
@@ -18,7 +15,7 @@ export async function reloadModerables(){
 }
 
 export function displayModerables(messages: any[]){
-	const list = document.querySelector("#moderables-list");
+	const list = el("#moderables-list");
 	if (!list) return;
 	list.innerHTML = "";
 	messages.forEach(m => {
@@ -27,13 +24,20 @@ export function displayModerables(messages: any[]){
 	});
 }
 
+function renderTag(text: string, kind: "artist" | "nsfw" | "media"){
+	const e = document.createElement("span");
+	e.className = `tag tag-${kind}`;
+	e.textContent = text;
+	return e;
+}
+
 function renderModerable(message: any, id: string){
 	if (message.version != 3 && message.version != 4){
 		console.error("Unsupported message version");
 		return;
 	}
 
-	const proto = (fromTemplate("generic-moderable") as Element)?.firstElementChild as HTMLElement;
+	const proto = fromTemplateFirst("generic-moderable");
 	if (!proto) return;
 
 	proto.dataset.id = id;
@@ -49,29 +53,25 @@ function renderModerable(message: any, id: string){
 	const link = proto.querySelector("a");
 	if (link) link.href = source;
 	const image = proto.querySelector("img");
-	// if (image) image.src = preview;
-
-	function renderTag(text: string, color: string){
-		const e = document.createElement("div");
-		e.className = "rounded bordered padded";
-		e.textContent = text;
-		e.style.backgroundColor = color;
-		return e;
+	if (image) {
+		image.loading = "lazy";
+		image.src = preview;
 	}
+
 	const tags = proto.querySelector(".moderable-info");
 	if (tags){
 		if (message.artists)
 			message.artists.forEach((artist: string) =>
-				tags.append(renderTag(`🎨 ${artist}`, "transparent"))
+				tags.append(renderTag(`🎨 ${artist}`, "artist"))
 			);
 		if (message.nsfw)
-			tags.append(renderTag("NSFW", "rgba(200, 0, 0, .3"));
+			tags.append(renderTag("nsfw", "nsfw"));
 		if (message.tags?.includes("animated"))
-			tags.append(renderTag("animated", "rgba(50, 50, 200, .3"));
+			tags.append(renderTag("animated", "media"));
 		if (message.tags?.includes("animated_gif"))
-			tags.append(renderTag("GIF", "rgba(50, 50, 200, .3"));
+			tags.append(renderTag("gif", "media"));
 		if (message.tags?.includes("video"))
-			tags.append(renderTag("video", "rgba(50, 50, 200, .3"));
+			tags.append(renderTag("video", "media"));
 	}
 
 	proto.querySelectorAll<HTMLElement>("[data-moderable-button]").forEach(b => {
@@ -90,7 +90,7 @@ function renderModerable(message: any, id: string){
 		}
 	});
 
-	proto.addEventListener("focusin", () => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
+	proto.addEventListener("focusin", () => proto.scrollIntoView({ block: "center" }));
 	proto.addEventListener("mousedown", e => e.preventDefault());
 
 	return proto;
@@ -100,25 +100,25 @@ export async function upscalePreviews(){
 	if (upscalerIsBusy()) return;
 
 	const moderables = Array.from(document.querySelectorAll<HTMLElement>(".moderable"));
-	const abortButton = document.querySelector("#moderables-upscale-abort");
-	const upscaleButton = document.querySelector("#moderables-upscale");
+	const abortButton = el("#moderables-upscale-abort");
+	const upscaleButton = el("#moderables-upscale");
 
 	loadTasks(moderables);
 	runTasks(() => {
-		upscaleButton?.classList.remove("hidden");
-		abortButton?.classList.add("hidden");
+		if (upscaleButton) upscaleButton.hidden = false;
+		if (abortButton) abortButton.hidden = true;
 	});
 
-	upscaleButton?.classList.add("hidden");
-	abortButton?.classList.remove("hidden");
+	if (upscaleButton) upscaleButton.hidden = true;
+	if (abortButton) abortButton.hidden = false;
 }
 
 export function fixFocus(){
-	const target = document.querySelector<HTMLElement>(".moderable:not(.approved):not(.rejected)");
+	const target = el(".moderable:not(.approved):not(.rejected)");
 	if (target)
 		target.focus();
 	else
-		document.querySelector<HTMLElement>(".moderable")?.focus();
+		el(".moderable")?.focus();
 }
 
 export function decide(approve: boolean){
@@ -132,17 +132,14 @@ export function decide(approve: boolean){
 	if (nextSib?.classList.contains("moderable"))
 		nextSib.focus();
 	else
-		document.querySelector("#moderables-submit")?.scrollIntoView({behavior: "smooth", block: "center"});
+		el("#moderables-submit")?.scrollIntoView({behavior: "smooth", block: "center"});
 }
 
 export function moveFocus(next: boolean) {
 	const focused = document.activeElement;
 
 	if (!focused) {
-		const target = document.querySelector<HTMLElement>(".moderable");
-		if (!target) return;
-
-		target.focus();
+		el(".moderable")?.focus();
 		return;
 	}
 
@@ -150,7 +147,7 @@ export function moveFocus(next: boolean) {
 	const currentIndex = options.findIndex(option => option === focused);
 
 	if (currentIndex === -1) {
-		if (options[0]) options[0].focus();
+		options[0]?.focus();
 		return;
 	}
 	if (options.length === 1) return;
@@ -173,8 +170,8 @@ export async function moderate(){
 	if (decisions.length == 0) return;
 
 	pullCurtain(true);
-	const newModerables = await callAPI("moderate", {decisions: decisions}, true);
-	
+	const newModerables = await api.post<any[]>("/api/moderate", { decisions });
 	pullCurtain(false);
-	displayModerables(newModerables.data);
+
+	if (ok(newModerables)) displayModerables(newModerables.data);
 }

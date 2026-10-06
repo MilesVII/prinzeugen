@@ -1,19 +1,53 @@
-import { callAPI, fromTemplate, sleep, chunk, zip, safe } from "./utils/utils";
+import { api, safe, zip, load, save, el } from "./utils/utils";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { displayGrabbers, downloadGrabbers } from "./grabbing";
 import { report } from "./utils/console";
 
 const CONCURRENT_QUERIES = 2;
+const CREDENTIALS_KEY = "gelbooru-credentials";
+const PROXY_BASE = "/proxie/gelbooru.com/index.php";
 
 type PostCount = {
 	artist: string,
 	count: "error" | "empty" | "exists_in_grabber" | number
 };
 
+type Credentials = {
+	user: string,
+	key: string
+};
+
+/** The refeeder is not a grabber, so its gelbooru credentials live in this browser only */
+export function initFeederCredentials() {
+	const userInput = el<HTMLInputElement>("#refeeder-user");
+	const keyInput = el<HTMLInputElement>("#refeeder-key");
+	if (!userInput || !keyInput) return;
+
+	const stored = load(CREDENTIALS_KEY) as Partial<Credentials> | null;
+	userInput.value = stored?.user ?? "";
+	keyInput.value = stored?.key ?? "";
+
+	const persist = () => save(CREDENTIALS_KEY, readCredentials() ?? { user: userInput.value.trim(), key: keyInput.value.trim() });
+	userInput.addEventListener("input", persist);
+	keyInput.addEventListener("input", persist);
+}
+
+function readCredentials(): Credentials | null {
+	const user = el<HTMLInputElement>("#refeeder-user")?.value.trim() ?? "";
+	const key = el<HTMLInputElement>("#refeeder-key")?.value.trim() ?? "";
+	if (!user || !key) return null;
+	return { user, key };
+}
+
 export async function refeed() {
 	const artists = parseArtistList();
-
 	if (artists.length <= 0) return;
+
+	const credentials = readCredentials();
+	if (!credentials) {
+		report("Gelbooru user id and API key are required to count posts per artist. Fill them in above.");
+		return;
+	}
 
 	const oldMemo = readMemo();
 	if (typeof oldMemo !== "string") return;
@@ -29,7 +63,7 @@ export async function refeed() {
 	const queue = [...artists];
 	const results: PostCount[] = [];
 	while (queue.length > 0) {
-		const activeQueue = [];
+		const activeQueue: string[] = [];
 
 		const grabCount = Math.min(queue.length, CONCURRENT_QUERIES);
 		for (let i = 0; i < grabCount; ++i) {
@@ -38,12 +72,12 @@ export async function refeed() {
 
 			const dupe = checkExisting(fresh, grabbers);
 			if (dupe)
-				results.push(dupe)
+				results.push(dupe);
 			else
 				activeQueue.push(fresh);
 		}
 
-		const promiseResults = await Promise.allSettled(activeQueue.map(a => artistPostCount(a)));
+		const promiseResults = await Promise.allSettled(activeQueue.map(a => artistPostCount(a, credentials)));
 
 		const rows = zip(
 			activeQueue.map(artist => ({ artist })),
@@ -55,11 +89,11 @@ export async function refeed() {
 				({
 					artist,
 					count: result.status === "fulfilled" ? result.value : "error"
-				})
+				}) as PostCount
 			);
 
 		results.push(...postCounts);
-		
+
 		const percentage = results.length / artists.length * 100;
 		updateCurtainMessage(`Collecting meta: ${percentage.toFixed(2)}%`);
 	}
@@ -70,31 +104,23 @@ export async function refeed() {
 	pullCurtain(false);
 
 	displayGrabbers(grabbers);
-	if (newMemo) setMemo(newMemo)
+	if (newMemo) setMemo(newMemo);
 	renderResults(results);
 	refreshFeederList();
 }
 
 function parseArtistList() {
-	const input = document.querySelector<HTMLTextAreaElement>("#refeeder-input");
+	const input = el<HTMLTextAreaElement>("#refeeder-input");
 	if (!input) return [];
 
-	const artists = input.value
+	return input.value
 		.split("\n")
 		.map(line => line.trim())
 		.filter(line => line);
-	
-	return artists;
 }
 
-async function artistPostCount(artist: string): Promise<PostCount["count"]> {
-	function buildURLParams(params: Record<string, string>) {
-		return Object.keys(params)
-			.map(param => `${param}=${encodeURIComponent(params[param])}`)
-			.join("&");
-	}
-
-	const params = buildURLParams({
+async function artistPostCount(artist: string, credentials: Credentials): Promise<PostCount["count"]> {
+	const params = new URLSearchParams({
 		page: "dapi",
 		s: "post",
 		q: "index",
@@ -102,23 +128,21 @@ async function artistPostCount(artist: string): Promise<PostCount["count"]> {
 		pid: "0",
 		json: "1",
 		limit: "0",
-		// api_key: grabber.credentials.token,
-		// user_id: grabber.credentials.user
+		api_key: credentials.key,
+		user_id: credentials.user
 	});
-	const url = `gelbooru.com/index.php?${params}`;
-	const proxied = `https://prinzeugen.fokses.website/proxie/${url}`;
 
-	const response = await fetch(proxied);
+	const response = await fetch(`${PROXY_BASE}?${params}`);
+	if (!response.ok) return "error";
 
-	if (response.ok){
-		const count = (await response.json())["@attributes"].count as number ?? "error";
-		return count || "empty";
-	} else
-		return "error";
+	const payload = await response.json().catch(() => null);
+	const count = payload?.["@attributes"]?.count;
+	if (typeof count !== "number") return "error";
+	return count || "empty";
 }
 
 function renderResults(results: PostCount[]) {
-	const container = document.querySelector("#refeeder-log");
+	const container = el("#refeeder-log");
 	if (!container) return;
 
 	results.forEach(result => {
@@ -133,43 +157,39 @@ function renderResults(results: PostCount[]) {
 			switch (result.count) {
 				case ("error"): {
 					value.className = "refeeder-log-value-error";
-					value.textContent = "ERROR";
+					value.textContent = "error";
 					break;
 				}
 				case ("empty"): {
 					value.className = "refeeder-log-value-error";
-					value.textContent = "NO POSTS FOUND";
+					value.textContent = "no posts found";
 					break;
 				}
 				case ("exists_in_grabber"): {
 					value.className = "refeeder-log-value-dupe";
-					value.textContent = "Exists in grabber";
+					value.textContent = "exists in grabber";
 					break;
 				}
-				// case ("exists_in_list"): {
-				// 	value.className = "refeeder-log-value-dupe";
-				// 	value.textContent = "Exists in the list";
-				// 	break;
-				// }
 			}
 		}
-		
+
 		container.append(name, value);
 	});
 }
 
 function readMemo() {
-	const memoContainer = document.querySelector<HTMLTextAreaElement>("#settings-additional");
+	const memoContainer = el<HTMLTextAreaElement>("#settings-additional");
 	if (!memoContainer) return;
 
-	return memoContainer?.value ?? "";
+	return memoContainer.value ?? "";
 }
 
 function setMemo(newMemo: string) {
-	const memoContainer = document.querySelector<HTMLTextAreaElement>("#settings-additional");
+	const memoContainer = el<HTMLTextAreaElement>("#settings-additional");
 	if (!memoContainer) return;
 
-	return memoContainer.value = newMemo;
+	memoContainer.value = newMemo;
+	memoContainer.dispatchEvent(new Event("input"));
 }
 
 async function updateList(results: PostCount[], oldMemo: string) {
@@ -192,21 +212,19 @@ async function updateList(results: PostCount[], oldMemo: string) {
 				return {
 					feeder: newList,
 					old: memo.raw
-				}
+				};
 			} else {
 				return {
 					feeder: newList
-				}
+				};
 			}
 		}
 	}
 
 	const newMemo = getNewMemo();
 	const newMemoString = JSON.stringify(newMemo, undefined, "\t");
-	
-	await callAPI("saveSettings", {
-		additionalData: newMemoString
-	}, true);
+
+	await api.patch("/api/settings", { additional: newMemoString });
 
 	return newMemoString;
 }
@@ -224,41 +242,41 @@ function checkExisting(artist: string, grabbers: any[]): PostCount | null {
 }
 
 export function refreshFeederList() {
+	const listContainer = el("#refeeder-list");
+	if (!listContainer) return;
+	listContainer.innerHTML = "";
+
 	const memo = parseMemo(readMemo());
 	if (!memo.parsed?.feeder) return;
 	const list = memo.list();
 
 	const sections = ([
-		["Heavy", list.filter(([, count]) => count >= 200)],
-		["Medium", list.filter(([, count]) => count >= 120 && count < 200)],
-		["Light", list.filter(([, count]) => count < 120)]
+		["heavy", list.filter(([, count]) => count >= 200)],
+		["medium", list.filter(([, count]) => count >= 120 && count < 200)],
+		["light", list.filter(([, count]) => count < 120)]
 	] as const).filter(([, list]) => list.length > 0);
-
-	const listContainer = document.querySelector("#refeeder-list");
-	if (!listContainer) return;
-	listContainer.innerHTML = "";
 
 	sections.forEach(([name, section]) => {
 		const title = document.createElement("div");
 		title.className = "refeeder-section";
-		title.textContent = name;
+		title.textContent = `${name} (${section.length})`;
 		listContainer.append(title);
 
-		section
+		[...section]
 			.sort(([, a], [, b]) => b - a)
 			.forEach(([artist, count]) => {
-				const valueContainer = document.createElement("div");
-				valueContainer.className = "container row unpad";
+				const row = document.createElement("div");
+				row.className = "refeeder-row";
 
 				const value = document.createElement("div");
 				value.textContent = artist;
-				
+
 				const counter = document.createElement("span");
 				counter.className = "refeeder-list-counter";
 				counter.textContent = `${count}`;
-				
-				valueContainer.append(value, counter);
-				listContainer.append(valueContainer);
+
+				row.append(value, counter);
+				listContainer.append(row);
 			});
 	});
 }
@@ -275,13 +293,9 @@ export async function updateFeederList() {
 		return;
 	}
 
-	const grabberArtists = grabbers
+	const grabberArtists: string[] = grabbers
 		.filter(grabber => grabber?.type === "gelbooru")
-		.map(grabber => grabber.config?.tags)
-		.reduce((p, c) => {
-			p.push(...c);
-			return p;
-		}, []);
+		.flatMap(grabber => grabber.config?.tags ?? []);
 
 	const newList = oldList.filter(([artist]) => !grabberArtists.includes(artist));
 
@@ -289,14 +303,12 @@ export async function updateFeederList() {
 	let newMemoString = null;
 	if (delta !== 0) {
 		report(`Removing ${delta} ${delta === 1 ? "artist" : "artists"} from feeder`);
-		
+
 		oldMemo.parsed.feeder = Object.fromEntries(newList);
 		newMemoString = JSON.stringify(oldMemo.parsed, undefined, "\t");
-		
+
 		updateCurtainMessage("Updating memo");
-		await callAPI("saveSettings", {
-			additionalData: newMemoString
-		}, true);
+		await api.patch("/api/settings", { additional: newMemoString });
 	} else {
 		report("No duplicates found, nothing to update");
 	}
@@ -318,7 +330,7 @@ function parseMemo(memo: string = "") {
 			.map(artist =>
 				[artist, oldFeeder[artist]] as [artist: string, count: number]
 			);
-	}
+	};
 
 	return {
 		raw: memo,

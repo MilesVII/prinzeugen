@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"/>
+		<title>Prinz Eugen</title>
+		<link rel="icon" type="image/png" href="favicon.png"/>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+		<link rel="stylesheet" href="styles/main.css"/>
+		<link rel="stylesheet" href="styles/theme.css"/>
+		<link rel="stylesheet" href="styles/utils.css"/>
+		<link rel="stylesheet" href="styles/components.css"/>
+		<script type="module" src="ts/main.js"></script>
+	</head>
+
+	<body>
+		<ram-tabs id="state" tab="login">
+			<ram-tab key="login">
+				<div class="login-screen">
+					<form id="form-login" class="lineout login-card list" autocomplete="on">
+						<h1 class="login-title">Prinz Eugen</h1>
+						<fieldset>
+							<legend>login</legend>
+							<input type="text" id="login-id" class="strip" placeholder="name or id" autocomplete="username" required/>
+						</fieldset>
+						<fieldset>
+							<legend>password</legend>
+							<input type="password" id="login-token" class="strip" placeholder="password" autocomplete="current-password" required/>
+						</fieldset>
+						<div id="login-error" class="placeholder" hidden></div>
+						<button class="lineout">sign in</button>
+					</form>
+				</div>
+			</ram-tab>
+
+			<ram-tab key="online">
+				<nav class="topbar shadow">
+					<div class="topbar-nav">
+						<ram-tab-button for="tabs-main" tab="dash">dashboard</ram-tab-button>
+						<ram-tab-button for="tabs-main" tab="feed">collection</ram-tab-button>
+						<ram-tab-button for="tabs-main" tab="grab">grabbers</ram-tab-button>
+						<ram-tab-button for="tabs-main" tab="mode">moderation</ram-tab-button>
+						<ram-tab-button for="tabs-main" tab="pool">pool</ram-tab-button>
+						<ram-tab-button for="tabs-main" tab="sets">settings</ram-tab-button>
+					</div>
+					<div id="topbar-user" class="hint no-shrink"></div>
+				</nav>
+
+				<ram-tabs id="tabs-main" tab="dash">
+					<!-- Dashboard -->
+					<ram-tab key="dash">
+						<div class="main col pad float-center low-pad">
+							<div class="row-wrap" id="dashboard-stats">
+								<div class="lineout stat"><span class="stat-value" data-stat="approved">–</span><span class="stat-label">in pool</span></div>
+								<div class="lineout stat"><span class="stat-value" data-stat="pending">–</span><span class="stat-label">pending moderation</span></div>
+								<div class="lineout stat"><span class="stat-value" data-stat="failed">–</span><span class="stat-label">failed</span></div>
+							</div>
+							<div class="row-wrap">
+								<button id="dashboard-grab" class="lineout">grab from all grabbers</button>
+							</div>
+							<div class="list">
+								<div class="row-compact">
+									<select id="dashboard-api-method" class="lineout">
+										<option>POST</option>
+										<option>GET</option>
+										<option>PUT</option>
+										<option>PATCH</option>
+										<option>DELETE</option>
+									</select>
+									<input type="text" id="dashboard-api-path" class="lineout wide" value="/api/publish" spellcheck="false" autocomplete="off"/>
+								</div>
+								<fieldset>
+									<legend><label for="dashboard-api">request body, json</label></legend>
+									<textarea id="dashboard-api" class="strip" rows="8" spellcheck="false"></textarea>
+								</fieldset>
+							</div>
+							<div class="row-compact baseline">
+								<button id="dashboard-api-submit" class="lineout">send</button>
+								<div class="api-hint">
+									your session token is attached automatically.
+									scripts and cron jobs should use an api token from settings:
+									<code>Authorization: Bearer &lt;token&gt;</code>
+								</div>
+							</div>
+						</div>
+					</ram-tab>
+
+					<!-- Collection / refeeder -->
+					<ram-tab key="feed">
+						<div class="main col pad float-center low-pad">
+							<div class="list">
+								<div class="split-col">
+									<fieldset>
+										<legend><label for="refeeder-user">gelbooru user id</label></legend>
+										<input type="text" id="refeeder-user" class="strip" inputmode="numeric" autocomplete="off"/>
+									</fieldset>
+									<fieldset>
+										<legend><label for="refeeder-key">gelbooru api key</label></legend>
+										<input type="password" id="refeeder-key" class="strip" autocomplete="off"/>
+									</fieldset>
+								</div>
+								<div class="hint">stored in this browser only. required to count posts per artist.</div>
+							</div>
+							<fieldset>
+								<legend><label for="refeeder-input">refeed artists, one per line</label></legend>
+								<textarea id="refeeder-input" class="strip" rows="10" spellcheck="false"></textarea>
+							</fieldset>
+							<div class="row-wrap">
+								<button id="refeeder-button" class="lineout">submit</button>
+								<button id="refeeder-view" class="lineout">view list</button>
+								<button id="refeeder-update" class="lineout">update list</button>
+							</div>
+							<div class="refeeder-log" id="refeeder-log"></div>
+							<div class="list" id="refeeder-list"></div>
+						</div>
+					</ram-tab>
+
+					<!-- Grabbers -->
+					<ram-tab key="grab">
+						<div class="main col pad float-center low-pad">
+							<div class="row-wrap baseline">
+								<button id="grabbers-save" class="lineout">save</button>
+								<span class="hint">add:</span>
+								<button data-add-grabber="gelbooru" class="lineout">gelbooru</button>
+							</div>
+							<div class="list grabbers-list" id="grabbers-list"></div>
+						</div>
+					</ram-tab>
+
+					<!-- Moderation -->
+					<ram-tab key="mode">
+						<div class="main col pad float-center low-pad">
+							<div class="row-wrap">
+								<button id="moderables-reload" class="lineout">reload</button>
+								<button id="moderables-upscale" class="lineout">upscale</button>
+								<button id="moderables-upscale-abort" class="lineout" hidden>abort</button>
+								<button id="moderables-submit" class="lineout">submit</button>
+							</div>
+							<div class="hint">keys: <code>,</code> approve · <code>.</code> reject · <code>0</code> upscale · <code>M</code> or right shift: focus next undecided</div>
+							<div class="list" id="moderables-list"></div>
+						</div>
+						<div class="mobile-controls">
+							<button id="mobile-controls-up" class="lineout" title="previous">↑</button>
+							<button id="mobile-controls-approve" class="lineout" title="approve">✓</button>
+							<button id="mobile-controls-down" class="lineout" title="next">↓</button>
+							<button id="mobile-controls-reject" class="lineout" title="reject">✕</button>
+						</div>
+					</ram-tab>
+
+					<!-- Pool -->
+					<ram-tab key="pool">
+						<div class="main col pad float-center low-pad">
+							<div class="row-wrap baseline">
+								<button id="pool-load" class="lineout">load</button>
+								<ram-page id="pool-pagination" class="row-compact baseline hor-autoflow" class-buttons="lineout" class-ellipsi="hint"></ram-page>
+							</div>
+							<div class="pool-grid" id="pool-content"></div>
+						</div>
+					</ram-tab>
+
+					<!-- Settings -->
+					<ram-tab key="sets">
+						<div class="main col pad float-center low-pad">
+							<details open>
+								<summary class="settings-label">account</summary>
+								<div class="list">
+									<fieldset>
+										<legend><label for="settings-password-current">current password</label></legend>
+										<input type="password" id="settings-password-current" class="strip" autocomplete="current-password"/>
+									</fieldset>
+									<fieldset>
+										<legend><label for="settings-password">new password</label></legend>
+										<input type="password" id="settings-password" class="strip" autocomplete="new-password" placeholder="at least 8 characters"/>
+									</fieldset>
+									<button id="settings-password-save" class="lineout fit">change password</button>
+								</div>
+							</details>
+
+							<details open>
+								<summary class="settings-label">telegram &amp; data</summary>
+								<div class="list">
+									<fieldset>
+										<legend><label for="settings-tg-token">telegram bot token</label></legend>
+										<input type="password" id="settings-tg-token" class="strip" autocomplete="off"/>
+									</fieldset>
+									<fieldset>
+										<legend>
+											<label for="settings-additional">additional data</label>
+											<span id="settings-flicker" class="flicker"></span>
+										</legend>
+										<textarea id="settings-additional" class="strip" rows="10" spellcheck="false"></textarea>
+									</fieldset>
+									<button id="settings-save" class="lineout fit">save</button>
+								</div>
+							</details>
+
+							<details>
+								<summary class="settings-label">api tokens</summary>
+								<div class="list">
+									<div class="hint">long-lived tokens for cron jobs and scripts. a token is shown only once, right after creation.</div>
+									<div class="row-compact">
+										<input type="text" id="settings-token-name" class="lineout wide" placeholder="token name, e.g. publisher cron"/>
+										<button id="settings-token-create" class="lineout no-shrink">create</button>
+									</div>
+									<div id="settings-token-list" class="list"></div>
+								</div>
+							</details>
+
+							<details id="settings-users-section" hidden>
+								<summary class="settings-label">users</summary>
+								<div class="list">
+									<div class="hint">there is no self-registration. create accounts for people you trust.</div>
+									<div class="row-compact">
+										<input type="text" id="settings-user-name" class="lineout wide" placeholder="name" autocomplete="off"/>
+										<input type="password" id="settings-user-password" class="lineout wide" placeholder="password" autocomplete="new-password"/>
+									</div>
+									<div class="row-wrap" id="settings-user-permissions">
+										<label class="row-compact baseline pointer"><input type="checkbox" id="settings-user-invite"/><span>can create users</span></label>
+										<label class="row-compact baseline pointer"><input type="checkbox" id="settings-user-admin"/><span>admin</span></label>
+									</div>
+									<button id="settings-user-create" class="lineout fit">create user</button>
+									<div id="settings-user-list" class="list"></div>
+								</div>
+							</details>
+
+							<details>
+								<summary class="settings-label">theme</summary>
+								<div id="settings-theme" class="row-wrap"></div>
+							</details>
+
+							<button id="settings-signout" class="lineout fit float-end">sign out</button>
+						</div>
+					</ram-tab>
+				</ram-tabs>
+			</ram-tab>
+		</ram-tabs>
+
+		<div id="curtain" class="curtain" hidden>
+			<div class="lineout curtain-message" id="curtain-message">Wait</div>
+		</div>
+
+		<details class="console" data-unread="0">
+			<summary class="lineout">console</summary>
+			<div class="lineout list"></div>
+		</details>
+
+		<dialog id="pool-preview">
+			<form method="dialog">
+				<img src="placeholder.png" class="pool-preview-image" alt=""/>
+				<div class="row-wrap" id="pool-preview-controls"></div>
+			</form>
+		</dialog>
+
+		<!-- Templates -->
+		<template id="generic-grabber">
+			<div class="lineout grabber list">
+				<div class="row-wrap">
+					<button class="lineout" data-grabber-button="grab">grab</button>
+					<button class="lineout" data-grabber-button="less">grab less</button>
+					<button class="lineout" data-grabber-button="remv">remove</button>
+				</div>
+			</div>
+		</template>
+		<template id="generic-field-multiline">
+			<fieldset>
+				<legend>
+					<label></label>
+					<span class="hint"></span>
+				</legend>
+				<textarea class="strip" rows="4" spellcheck="false"></textarea>
+			</fieldset>
+		</template>
+		<template id="generic-field-line">
+			<fieldset>
+				<legend><label></label></legend>
+				<input type="text" class="strip" autocomplete="off"/>
+			</fieldset>
+		</template>
+		<template id="generic-moderable">
+			<div class="moderable lineout list" tabindex="0">
+				<a tabindex="-1" target="_blank" rel="noreferrer"><img src="placeholder.png" alt=""/></a>
+				<div class="row-wrap moderable-info"></div>
+				<div class="row-wrap moderable-actions">
+					<button tabindex="-1" class="lineout" data-moderable-button="approve">approve</button>
+					<button tabindex="-1" class="lineout" data-moderable-button="reject">reject</button>
+				</div>
+			</div>
+		</template>
+		<template id="generic-pool-item">
+			<article class="lineout pool-item">
+				<img alt=""/>
+			</article>
+		</template>
+		<template id="template-theme-selector">
+			<svg class="theme-selector" viewBox="0 0 6 1" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+				<path d="M0,0 l100,0 l0,1 l-100,0 Z" fill="var(--color-base)"/>
+				<path d="M1,1 l1,-1 L100,0 L100,1 Z" fill="var(--color-secondary)"/>
+				<path d="M2,1 l1,-1 L100,0 L100,1 Z" fill="var(--color-accent)"/>
+				<path d="M3,1 l1,-1 L100,0 L100,1 Z" fill="var(--color-text)"/>
+				<path d="M4,1 l1,-1 L100,0 L100,1 Z" fill="var(--color-base)"/>
+			</svg>
+		</template>
+		<template id="template-token-item">
+			<div class="lineout token-item">
+				<span class="grow" data-field="name"></span>
+				<span class="hint" data-field="meta"></span>
+				<button class="lineout" data-action="revoke">revoke</button>
+			</div>
+		</template>
+		<template id="template-user-item">
+			<div class="lineout user-item">
+				<span class="hint" data-field="id"></span>
+				<span class="grow" data-field="name"></span>
+				<span class="hint" data-field="meta"></span>
+			</div>
+		</template>
+	</body>
+</html>

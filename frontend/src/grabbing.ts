@@ -1,6 +1,6 @@
-import { callAPI, fromTemplate } from "./utils/utils";
+import { api, ok, errorText, fromTemplateFirst, el } from "./utils/utils";
 import { Grabbers } from "./utils/grabbers";
-import type { Grabber, GrabberType } from "./utils/grabbers"
+import type { Grabber, GrabberType } from "./utils/grabbers";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { report } from "./utils/console";
 import { downloadModerables, displayModerables } from "./moderation";
@@ -8,20 +8,18 @@ import { downloadModerables, displayModerables } from "./moderation";
 import * as forms from "./utils/forms";
 
 export async function downloadGrabbers(): Promise<any[] | null> {
-	const grabbers = await callAPI("getGrabbers", {}, true);
-	if (grabbers.status == 200)
-		return grabbers.data;
-	else
-		return null;
+	const grabbers = await api.get<any[]>("/api/grabbers");
+	return ok(grabbers) ? grabbers.data : null;
 }
 
 export function displayGrabbers(grabs: any[]){
-	const list = document.querySelector<HTMLElement>("#grabbers-list");
+	const list = el("#grabbers-list");
 	if (!list) return;
 	list.innerHTML = "";
 
 	grabs.forEach((g, i) => {
-		const meta: Grabber = Grabbers[g.type as GrabberType];
+		const meta: Grabber | undefined = Grabbers[g.type as GrabberType];
+		if (!meta) return;
 		const proto = renderGrabber(g.type, i);
 		if (!proto) return;
 
@@ -41,33 +39,31 @@ export async function batchGrab(){
 	let newRowsCount = 0;
 	for (let i = 0; i < grabbersReference.length; ++i){
 		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
-		const response = await callAPI("grab", {id: i}, true);
-		if (response.status != 200){
-			report(`Grab #${i} failed`);
-			console.error(response);
+		const response = await api.post<{ added: number }>("/api/grab", { id: i });
+		if (!ok(response)){
+			report(`Grab #${i} failed: ${errorText(response)}`);
 		} else
-			newRowsCount += parseInt(response.data, 10) || 0;
+			newRowsCount += response.data.added || 0;
 	}
 	report(`${newRowsCount} new entries`);
 
 	afterGrab();
 }
 
-export async function selectiveGrab(grabberId: number, batchSize?: number){
+export async function selectiveGrab(grabberId: number, batchLimit?: number){
 	pullCurtain(true);
 
 	const params = {
 		id: grabberId,
-		...(batchSize ? {batchSize: batchSize} : {})
+		...(batchLimit ? { batchLimit } : {})
 	};
 
 	updateCurtainMessage(`Grabbing #${grabberId}`);
-	const response = await callAPI("grab", params, true);
-	if (response.status != 200){
-		report(`Grab #${grabberId} failed`);
-		console.error(response);
+	const response = await api.post<{ added: number }>("/api/grab", params);
+	if (!ok(response)){
+		report(`Grab #${grabberId} failed: ${errorText(response)}`);
 	} else
-		report(`${response.data} new entries`);
+		report(`${response.data.added} new entries`);
 
 	afterGrab();
 }
@@ -84,26 +80,25 @@ async function afterGrab(){
 }
 
 export async function saveGrabbers(){
-	const list = document.querySelector<HTMLElement>("#grabbers-list");
+	const list = el("#grabbers-list");
 	const grabs = Array.from(list?.children ?? [])
-		.map(el => {
-			const container = el as HTMLElement;
-			return Grabbers[container?.dataset.grabberForm as GrabberType].read(container)
+		.map(child => {
+			const container = child as HTMLElement;
+			return Grabbers[container?.dataset.grabberForm as GrabberType].read(container);
 		});
-	
 
 	pullCurtain(true);
-	const response = await callAPI("setGrabbers", {
-		grabbers: grabs
-	});
-
-	const updateGrabbers = response.status === 200 ? await downloadGrabbers() : null;
+	const response = await api.put<any[]>("/api/grabbers", grabs);
 	pullCurtain(false);
-	if (updateGrabbers) displayGrabbers(updateGrabbers);
+
+	if (ok(response))
+		displayGrabbers(response.data);
+	else
+		report(`Saving grabbers failed: ${errorText(response)}`);
 }
 
 export function addGrabber(type: GrabberType){
-	const list = document.querySelector("#grabbers-list");
+	const list = el("#grabbers-list");
 	const proto = renderGrabber(type);
 	if (proto && list) list.appendChild(proto);
 }
@@ -112,7 +107,7 @@ export function renderGrabber(type: GrabberType, index?: number) {
 	const meta = Grabbers[type];
 	if (!meta) return null;
 
-	const proto = (fromTemplate("generic-grabber") as Element)?.firstElementChild as HTMLElement;
+	const proto = fromTemplateFirst("generic-grabber");
 	if (!proto) return null;
 	const buttons = proto.querySelector("div");
 	if (!buttons) return null;
@@ -133,16 +128,17 @@ export function renderGrabber(type: GrabberType, index?: number) {
 
 	if (index === undefined){
 		const hint = document.createElement("div");
-		hint.textContent = "Save grabbers before grabbing";
-		proto.insertBefore(hint, proto.children[0]);
+		hint.className = "placeholder";
+		hint.textContent = "save grabbers before grabbing";
+		proto.insertBefore(hint, proto.children[0] ?? null);
 		if (grab) grab.disabled = true;
 		if (less) less.disabled = true;
 	} else {
 		if (grab) grab.addEventListener("click", () => selectiveGrab(index));
 		if (less) less.addEventListener("click", () => selectiveGrab(index, 50));
 	}
-	
+
 	proto.appendChild(buttons);
 
-	return proto as HTMLElement;
+	return proto;
 }

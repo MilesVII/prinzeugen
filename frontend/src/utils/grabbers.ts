@@ -65,7 +65,7 @@ const GelbooruGrabber: Grabber = {
 			type: "gelbooru",
 			credentials: {
 				user: parseInt(formData.user?.trim() ?? "0", 10),
-				token: formData.api?.trim()
+				token: formData.api?.trim() ?? ""
 			},
 			config: {
 				tags: formData.tags ? tagList(formData.tags) : [""],

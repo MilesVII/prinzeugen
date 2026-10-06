@@ -1,0 +1,21 @@
+{
+	"name": "prinzeugen",
+	"private": true,
+	"workspaces": [
+		"core",
+		"frontend"
+	],
+	"scripts": {
+		"build": "bun run frontend/build.ts",
+		"start": "bun run core/src/server.ts",
+		"dev": "bun run scripts/dev.ts",
+		"proxy": "bun run core/local-proxy.ts",
+		"db:migrate": "bun run core/scripts/migrate.ts",
+		"user": "bun run core/scripts/user.ts",
+		"typecheck": "bun run --cwd core typecheck && bun run --cwd frontend typecheck"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.12",
+		"typescript": "^5.5.0"
+	}
+}

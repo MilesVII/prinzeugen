@@ -1,12 +1,17 @@
 {
-  "type": "module",
-  "dependencies": {
-  },
-  "devDependencies": {
-    "esbuild": "0.20.0"
-  },
-  "scripts": {
-    "build": "esbuild src/main.ts --bundle --sourcemap         --outfile=dist/ts/index.js",
-    "watch": "esbuild src/main.ts --bundle --sourcemap --watch --outfile=dist/ts/index.js"
-  }
+	"name": "frontend",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "bun run build.ts",
+		"watch": "bun run build.ts --watch",
+		"typecheck": "tsc --noEmit -p tsconfig.json"
+	},
+	"dependencies": {
+		"rampike": "^0.0.13"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.12",
+		"typescript": "^5.5.0"
+	}
 }

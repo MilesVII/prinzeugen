@@ -1,34 +1,23 @@
-import type { Message } from "./message";
+import { t, type Static, type TSchema } from "elysia";
+import type { Message } from "./message.ts";
+import { gelbooruGrabber, GelbooruConfigSchema } from "./gelbooru.ts";
 
-import { gelbooruGrabber } from "./gelbooru"
-
-const grabbers = [ gelbooruGrabber ];
-export const registry = Object.fromEntries(grabbers.map(g => [g.id, g]))
-
-export type Grabber<Id extends string, Config, Options> = {
-	id: Id,
-	configSchema: any,
-	grab: (config: Config, options?: Options) => Promise<Message[]>,
-	verify: (config: Config, reference: string) => Promise<null | Message>
-}
-
-type GelbooruConfig = {
-	credentials: {
-		user: number,
-		token: string
-	},
-	config: {
-		tags: string[],
-		whites: string[],
-		blacks: string[],
-	},
-	state: {
-		lastSeen: number
-	}
-};
-type GelbooruOptions = {
+export type GrabOptions = {
 	skipArtists?: boolean,
 	batchLimit?: number
-}
+};
 
-export type GelbooruGrabber = Grabber<"gelbooru", GelbooruConfig, GelbooruOptions>
+export type Grabber<Config> = {
+	id: Config extends { type: infer Id } ? Id : string,
+	schema: TSchema,
+	grab: (config: Config, options?: GrabOptions) => Promise<Message[]>,
+	verify: (config: Config, reference: string) => Promise<null | Message>
+};
+
+/** Union of every grabber config; `type` discriminates */
+export const GrabberConfigSchema = t.Union([GelbooruConfigSchema]);
+export type GrabberConfig = Static<typeof GrabberConfigSchema>;
+
+export const registry: { [K in GrabberConfig["type"]]: Grabber<Extract<GrabberConfig, { type: K }>> } = {
+	gelbooru: gelbooruGrabber
+};

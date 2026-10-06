@@ -1,0 +1,9 @@
+[Unit]
+Description=Prinz Eugen database backup to Telegram
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=__APP_USER__
+WorkingDirectory=__APP_DIR__
+ExecStart=/bin/bash __APP_DIR__/deploy/backup.sh
