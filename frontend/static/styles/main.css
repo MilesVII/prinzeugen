@@ -1,6 +1,13 @@
-/* Base styles. Structure and tokens follow aegir's main.css; sizes are fixed px, not viewport units. */
-
-@import url("https://fonts.googleapis.com/css2?family=Ubuntu+Sans:ital,wght@0,400;0,600;1,400&family=Ubuntu+Sans+Mono&display=swap");
+@font-face{
+	font-family: "Ubuntu Sans";
+	src: url("./ubuntu-sans.ttf") format("truetype");
+	font-style: normal;
+}
+@font-face{
+	font-family: "Ubuntu Sans Mono";
+	src: url("./ubuntu-sans-mono.ttf") format("truetype");
+	font-style: normal;
+}
 
 @media screen and (min-width: 960px) {
 	:root {

@@ -16,6 +16,7 @@ import { decide, moveFocus, fixFocus, upscalePreviews, displayModerables, modera
 import { initPool, loadMessagePool } from "./pool";
 import { flushTasks } from "./utils/upscaler";
 import { refeed, refreshFeederList, updateFeederList, initFeederCredentials } from "./gb-feeder";
+import { mudcrack } from "rampike";
 
 type User = {
 	id: number,
@@ -349,19 +350,27 @@ async function createApiToken() {
 	}
 	if (nameInput) nameInput.value = "";
 
-	const reveal = document.createElement("div");
-	reveal.className = "lineout list";
-	const hint = document.createElement("div");
-	hint.className = "hint";
-	hint.textContent = `"${response.data.name}" created. Copy it now, it will not be shown again.`;
-	const value = document.createElement("div");
-	value.className = "lineout token-reveal";
-	value.textContent = response.data.token;
-	const dismiss = document.createElement("button");
-	dismiss.className = "lineout fit";
-	dismiss.textContent = "dismiss";
-	dismiss.addEventListener("click", () => reveal.remove());
-	reveal.append(hint, value, dismiss);
+	const reveal = mudcrack({
+		className: "lineout list",
+		contents: [
+			mudcrack({
+				className: "hint",
+				contents: `"${response.data.name}" created. Copy it now, it will not be shown again.`
+			}),
+			mudcrack({
+				className: "lineout token-reveal",
+				contents: response.data.token
+			}),
+			mudcrack({
+				tagName: "button",
+				className: "lineout fit",
+				contents: "dismiss",
+				events: {
+					click: () => reveal.remove()
+				}
+			})
+		]
+	});
 
 	list?.querySelectorAll(".token-reveal").forEach(e => e.parentElement?.remove());
 	list?.prepend(reveal);

@@ -95,7 +95,7 @@ fieldset > .strip {
 	justify-content: space-between;
 	gap: var(--dims-huge);
 
-	padding: var(--dims-reg) var(--dims-huge);
+	padding: var(--dims-reg) var(--dims-huge) 0 var(--dims-huge);
 	position: sticky;
 	top: 0;
 	background-color: var(--color-base);
@@ -278,6 +278,9 @@ summary.settings-label {
 }
 .console[open] > div > div:first-child {
 	color: var(--color-text);
+}
+.console[open] > div > div:last-child {
+	border: none;
 }
 
 .grabbers-list {
