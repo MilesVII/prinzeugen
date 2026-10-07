@@ -2,7 +2,7 @@ import { api, ok, fromTemplateFirst, el } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import type { RampikePagination } from "./components/pagination";
 
-const PLACEHOLDER_URL = "placeholder.png";
+export const PLACEHOLDER_URL = "placeholder.png";
 const STRIDE = 64;
 
 export function initPool() {

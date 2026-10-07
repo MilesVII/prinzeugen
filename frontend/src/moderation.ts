@@ -1,6 +1,7 @@
 import { api, ok, fromTemplateFirst, el } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import { isBusy as upscalerIsBusy, loadTasks, runTasks, flushTasks } from "./utils/upscaler";
+import { PLACEHOLDER_URL } from "./pool";
 
 export async function downloadModerables(){
 	const messages = await api.get<any[]>("/api/moderables");
@@ -55,7 +56,7 @@ function renderModerable(message: any, id: string){
 	const image = proto.querySelector("img");
 	if (image) {
 		image.loading = "lazy";
-		image.src = preview;
+		image.src = PLACEHOLDER_URL;
 	}
 
 	const tags = proto.querySelector(".moderable-info");
