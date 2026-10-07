@@ -118,9 +118,9 @@ async function publishToTelegram(
 	}
 
 	// gelbooru rotates image hosts; these rewrites match what currently resolves
-	const content = message.content;
-		// .replace("https://img4", "https://img2")
-		// .replace(/video-cdn.\./g, "video-cdn4.");
+	const content = message.content
+		.replace(/https:\/\/img.\./g, "https://img4")
+		.replace(/video-cdn.\./g, "video-cdn4.");
 	message.content = content;
 
 	const meta = await pingContentUrl(content);
