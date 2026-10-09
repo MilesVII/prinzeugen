@@ -8,3 +8,5 @@ core/src/upgrade.js
 .DS_Store
 references/
 .claude/
+errors/
+logs/

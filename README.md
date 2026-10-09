@@ -97,6 +97,19 @@ The server is an [Elysia](https://elysiajs.com) app (`core/src/app.ts`). Each ro
 | DELETE | `/api/pool/:id` | | unschedule |
 | POST | `/api/pool/:id/unfail` | | |
 | POST | `/api/publish` | `{ target, id?, flags?, count?, extras? }` | returns `{ published, failed }` |
+| GET / POST | `/api/jobs` | `{ name, cron, timezone?, enabled?, params }` | `params` is a publish body |
+| PUT / DELETE | `/api/jobs/:id` | same body | |
+| POST | `/api/jobs/:id/run` | | run once now, returns `{ result }` |
+| GET | `/api/ops` | | admin: status and log tail of backup/deploy |
+| POST | `/api/ops/:name/run` | `name` = `backup` or `deploy` | admin |
+
+### Publishing jobs
+
+The "jobs" tab schedules publish calls inside the server (`croner`, in-process, no external cron needed). Each job is a row in `publish_jobs`: cron pattern, IANA timezone, enabled flag and the same parameters as `POST /api/publish`. The scheduler arms enabled jobs at startup and re-arms a job whenever it is saved; a tick re-reads the row, runs `publish()`, and stores the outcome in `last_result`. Overlapping runs of the same job are skipped. "run now" executes a job immediately and returns its result.
+
+### Server operations from the dashboard
+
+Admins see a "server" section on the dashboard with "backup now" and "deploy latest". They run `deploy/backup.sh` and `deploy/deploy.sh` as the service user, logging to `logs/ops-<name>-<timestamp>.log`; the section shows the tail of the latest log. Two things make deploy-from-dashboard work, both handled by `install-services.sh`: the unit uses `KillMode=process` so the script survives the restart it triggers, and `/etc/sudoers.d/prinzeugen` lets the service user run `systemctl restart prinzeugen` without a password. Re-run `./deploy/install-services.sh` after pulling this version.
 
 ```bash
 curl -X POST https://dash.example.com/api/publish \

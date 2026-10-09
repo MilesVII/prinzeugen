@@ -16,6 +16,8 @@ import { decide, moveFocus, fixFocus, upscalePreviews, displayModerables, modera
 import { initPool, loadMessagePool } from "./pool";
 import { flushTasks } from "./utils/upscaler";
 import { refeed, refreshFeederList, updateFeederList, initFeederCredentials } from "./gb-feeder";
+import { initJobs, loadJobs } from "./jobs";
+import { initOps, loadOps } from "./ops";
 import { mudcrack } from "rampike";
 
 type User = {
@@ -33,7 +35,7 @@ type UserBundle = {
 	stats: { approved: number, pending: number, failed: number }
 };
 
-const MAIN_TABS = ["dash", "feed", "grab", "mode", "pool", "sets"];
+const MAIN_TABS = ["dash", "feed", "grab", "mode", "pool", "jobs", "sets"];
 const API_TEMPLATE = [
 	`{`,
 	`	"target": "",`,
@@ -137,6 +139,8 @@ function wire() {
 
 	initPool();
 	initFeederCredentials();
+	initJobs();
+	initOps();
 
 	// hash routing for the main tabs, so reloads and back/forward keep the page
 	el("#tabs-main")?.addEventListener("tab-pick", e => {
@@ -190,7 +194,14 @@ function authorize(bundle: UserBundle){
 	displayModerables(bundle.moderables);
 	refreshFeederList();
 	loadApiTokens();
-	if (user.role === "admin") loadUsers();
+	loadJobs();
+
+	const ops = el("#dashboard-ops");
+	if (ops) ops.hidden = user.role !== "admin";
+	if (user.role === "admin") {
+		loadUsers();
+		loadOps();
+	}
 
 	applyHash();
 

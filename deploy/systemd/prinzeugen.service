@@ -11,6 +11,9 @@ WorkingDirectory=__APP_DIR__
 ExecStart=__BUN__ run core/src/server.ts
 Restart=on-failure
 RestartSec=3
+# Only the server itself is killed on restart. deploy.sh started from the dashboard
+# lives in this cgroup and has to outlive the restart it triggers.
+KillMode=process
 Environment=NODE_ENV=production
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 

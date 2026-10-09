@@ -433,6 +433,46 @@ summary.settings-label {
 	border-color: var(--color-accent);
 }
 
+.job-form {
+	padding: var(--dims-reg);
+}
+.job-item {
+	padding: var(--dims-reg);
+}
+.job-item[data-enabled="false"] {
+	opacity: .6;
+}
+.job-name {
+	font: var(--font-bold);
+}
+.tag-ok {
+	border-color: var(--color-ok);
+	color: var(--color-ok);
+}
+
+#dashboard-ops summary {
+	margin-bottom: var(--dims-reg);
+}
+#ops-status > details {
+	padding: var(--dims-smol) var(--dims-reg);
+}
+#ops-status summary > span:first-child {
+	font: var(--font-bold);
+}
+.ops-log {
+	font: var(--font-mono);
+	font-size: 13px;
+	line-height: 17px;
+	max-height: 240px;
+	overflow: auto;
+	scrollbar-width: thin;
+	white-space: pre-wrap;
+	word-break: break-word;
+	padding: var(--dims-smol);
+	margin-top: var(--dims-smol);
+	border-top: 1px solid var(--color-secondary);
+}
+
 .api-hint {
 	font: var(--font-smol);
 	color: var(--color-subtext);

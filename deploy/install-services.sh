@@ -22,6 +22,19 @@ done
 
 chmod +x "$APP_DIR"/deploy/*.sh
 
+# deploy.sh (also triggered from the dashboard by admins) restarts the service without a terminal
+SYSTEMCTL="$(command -v systemctl)"
+SUDOERS_FILE=/etc/sudoers.d/prinzeugen
+printf '%s ALL=(root) NOPASSWD: %s restart prinzeugen.service, %s restart prinzeugen, %s status prinzeugen.service, %s status prinzeugen\n' \
+	"$APP_USER" "$SYSTEMCTL" "$SYSTEMCTL" "$SYSTEMCTL" "$SYSTEMCTL" | sudo tee "$SUDOERS_FILE" >/dev/null
+sudo chmod 440 "$SUDOERS_FILE"
+if ! sudo visudo -cf "$SUDOERS_FILE" >/dev/null; then
+	sudo rm -f "$SUDOERS_FILE"
+	echo "WARNING: sudoers rule rejected, dashboard-triggered deploys will not be able to restart the service"
+else
+	echo "installed $SUDOERS_FILE (passwordless systemctl restart/status prinzeugen for $APP_USER)"
+fi
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now prinzeugen.service
 sudo systemctl enable --now prinzeugen-backup.timer

@@ -2,6 +2,21 @@ import { Elysia, t } from "elysia";
 import { publish, PUB_FLAGS } from "../services/publish.ts";
 import { authorized } from "./authorized.ts";
 
+/** Body of POST /api/publish, also stored as the params of a publishing job */
+export const PublishParamsSchema = t.Object({
+	target: t.String(),
+	id: t.Optional(t.Integer()),
+	flags: t.Optional(t.Array(t.Union(PUB_FLAGS.map(flag => t.Literal(flag))))),
+	count: t.Optional(t.Integer({ minimum: 1, maximum: 50 })),
+	extras: t.Optional(t.Object({
+		customMarkup: t.Optional(t.Any()),
+		extraLink: t.Optional(t.Union([
+			t.String(),
+			t.Object({ text: t.String(), url: t.String() })
+		]))
+	}))
+});
+
 export const publishRoutes = new Elysia()
 	.use(authorized)
 
@@ -12,17 +27,5 @@ export const publishRoutes = new Elysia()
 		return outcome;
 	}, {
 		auth: "user",
-		body: t.Object({
-			target: t.String(),
-			id: t.Optional(t.Integer()),
-			flags: t.Optional(t.Array(t.Union(PUB_FLAGS.map(flag => t.Literal(flag))))),
-			count: t.Optional(t.Integer({ minimum: 1, maximum: 50 })),
-			extras: t.Optional(t.Object({
-				customMarkup: t.Optional(t.Any()),
-				extraLink: t.Optional(t.Union([
-					t.String(),
-					t.Object({ text: t.String(), url: t.String() })
-				]))
-			}))
-		})
+		body: PublishParamsSchema
 	});

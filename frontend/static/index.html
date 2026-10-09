@@ -41,6 +41,7 @@
 						<ram-tab-button for="tabs-main" tab="grab">grabbers</ram-tab-button>
 						<ram-tab-button for="tabs-main" tab="mode">moderation</ram-tab-button>
 						<ram-tab-button for="tabs-main" tab="pool">pool</ram-tab-button>
+						<ram-tab-button for="tabs-main" tab="jobs">jobs</ram-tab-button>
 						<ram-tab-button for="tabs-main" tab="sets">settings</ram-tab-button>
 					</div>
 					<div id="topbar-user" class="hint no-shrink"></div>
@@ -82,6 +83,69 @@
 									<code>Authorization: Bearer &lt;token&gt;</code>
 								</div>
 							</div>
+
+							<details id="dashboard-ops" hidden open>
+								<summary class="settings-label">server</summary>
+								<div class="list">
+									<div class="row-wrap">
+										<button class="lineout" data-op="backup">backup now</button>
+										<button class="lineout" data-op="deploy">deploy latest</button>
+										<button class="lineout" id="ops-refresh">refresh</button>
+									</div>
+									<div id="ops-status" class="list"></div>
+								</div>
+							</details>
+						</div>
+					</ram-tab>
+
+					<!-- Publishing jobs -->
+					<ram-tab key="jobs">
+						<div class="main col pad float-center low-pad">
+							<div class="hint">
+								jobs run inside the server on a cron schedule, no external caller needed.
+								pattern fields: minute hour day month weekday, e.g. <code>0 */3 * * *</code> every three hours,
+								<code>30 9,21 * * *</code> at 9:30 and 21:30.
+							</div>
+							<form id="job-form" class="lineout list job-form" autocomplete="off">
+								<div id="job-form-title" class="hint">new job</div>
+								<div class="split-col">
+									<fieldset>
+										<legend><label for="job-name">name</label></legend>
+										<input type="text" id="job-name" class="strip" placeholder="optional"/>
+									</fieldset>
+									<fieldset>
+										<legend><label for="job-cron">cron pattern</label></legend>
+										<input type="text" id="job-cron" class="strip" placeholder="0 */3 * * *" spellcheck="false"/>
+									</fieldset>
+								</div>
+								<div class="split-col">
+									<fieldset>
+										<legend><label for="job-target">telegram target</label></legend>
+										<input type="text" id="job-target" class="strip" placeholder="@channel or chat id" spellcheck="false"/>
+									</fieldset>
+									<fieldset>
+										<legend><label for="job-timezone">timezone</label></legend>
+										<input type="text" id="job-timezone" class="strip" placeholder="UTC" spellcheck="false"/>
+									</fieldset>
+								</div>
+								<div class="row-wrap ai-center">
+									<fieldset class="fit">
+										<legend><label for="job-count">posts per run</label></legend>
+										<input type="number" id="job-count" class="strip" min="1" max="50" value="1"/>
+									</fieldset>
+									<div id="job-flags" class="row-wrap"></div>
+									<label class="row-compact baseline pointer"><input type="checkbox" id="job-enabled" checked/><span>enabled</span></label>
+								</div>
+								<fieldset>
+									<legend><label for="job-extras">extras, json, optional</label></legend>
+									<textarea id="job-extras" class="strip" rows="2" spellcheck="false" placeholder='{ "extraLink": "https://..." }'></textarea>
+								</fieldset>
+								<div class="row-wrap">
+									<button type="submit" id="job-save" class="lineout">create job</button>
+									<button type="button" id="job-cancel" class="lineout" hidden>cancel</button>
+								</div>
+							</form>
+							<div id="jobs-list" class="list"></div>
 						</div>
 					</ram-tab>
 
@@ -307,6 +371,23 @@
 					<span class="hint" data-field="meta"></span>
 				</div>
 				<button class="lineout" data-action="revoke">revoke</button>
+			</div>
+		</template>
+		<template id="template-job-item">
+			<div class="lineout job-item list">
+				<div class="row-wrap baseline">
+					<span class="job-name" data-field="name"></span>
+					<code data-field="cron"></code>
+					<span class="tag" data-field="state"></span>
+				</div>
+				<div class="hint" data-field="meta"></div>
+				<div class="hint" data-field="last"></div>
+				<div class="row-wrap">
+					<button class="lineout" data-action="run">run now</button>
+					<button class="lineout" data-action="toggle">disable</button>
+					<button class="lineout" data-action="edit">edit</button>
+					<button class="lineout" data-action="delete">delete</button>
+				</div>
 			</div>
 		</template>
 		<template id="template-user-item">
