@@ -1,4 +1,5 @@
-import { api, ok, errorText, el, fromTemplateFirst, formatDate, safe } from "./utils/utils";
+import { mudcrack } from "rampike";
+import { api, ok, errorText, el, formatDate, safe } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import { report } from "./utils/console";
 
@@ -29,21 +30,14 @@ let editing: Job | null = null;
 const browserTimezone = () => safe(() => Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
 
 export function initJobs() {
-	const flags = el("#job-flags");
-	if (flags) {
-		flags.innerHTML = "";
-		FLAGS.forEach(flag => {
-			const label = document.createElement("label");
-			label.className = "row-compact baseline pointer";
-			const box = document.createElement("input");
-			box.type = "checkbox";
-			box.dataset.flag = flag;
-			const text = document.createElement("span");
-			text.textContent = flag;
-			label.append(box, text);
-			flags.append(label);
-		});
-	}
+	el("#job-flags")?.replaceChildren(...FLAGS.map(flag => mudcrack({
+		tagName: "label",
+		className: "row-compact baseline pointer",
+		contents: [
+			mudcrack({ tagName: "input", attributes: { type: "checkbox", "data-flag": flag } }),
+			mudcrack({ tagName: "span", contents: flag })
+		]
+	})));
 
 	const timezone = el<HTMLInputElement>("#job-timezone");
 	if (timezone) timezone.placeholder = browserTimezone();
@@ -139,18 +133,10 @@ export async function loadJobs() {
 	const response = await api.get<Job[]>("/api/jobs");
 	if (!ok(response)) return;
 
-	list.innerHTML = "";
-	if (response.data.length === 0) {
-		const empty = document.createElement("div");
-		empty.className = "hint";
-		empty.textContent = "no jobs yet";
-		list.append(empty);
-		return;
-	}
-	response.data.forEach(job => {
-		const item = renderJob(job);
-		if (item) list.append(item);
-	});
+	list.replaceChildren(...(response.data.length === 0
+		? [mudcrack({ className: "hint", contents: "no jobs yet" })]
+		: response.data.map(renderJob)
+	));
 }
 
 function describeParams(params: PublishParams) {
@@ -162,55 +148,70 @@ function describeParams(params: PublishParams) {
 	].filter(Boolean).join(" · ");
 }
 
+async function runJob(job: Job) {
+	pullCurtain(true, `Running "${job.name}"`);
+	const response = await api.post<{ result: string }>(`/api/jobs/${job.id}/run`);
+	pullCurtain(false);
+	report(ok(response) ? `"${job.name}": ${response.data.result}` : `Run failed: ${errorText(response)}`);
+	loadJobs();
+}
+
+async function toggleJob(job: Job) {
+	pullCurtain(true);
+	const response = await api.put(`/api/jobs/${job.id}`, { ...job, enabled: !job.enabled });
+	pullCurtain(false);
+	if (!ok(response)) report(`Update failed: ${errorText(response)}`);
+	loadJobs();
+}
+
+async function deleteJob(job: Job) {
+	if (!confirm(`Delete job "${job.name}"?`)) return;
+	pullCurtain(true);
+	const response = await api.del(`/api/jobs/${job.id}`);
+	pullCurtain(false);
+	if (!ok(response)) report(`Delete failed: ${errorText(response)}`);
+	if (editing?.id === job.id) setEditing(null);
+	loadJobs();
+}
+
 function renderJob(job: Job) {
-	const item = fromTemplateFirst("template-job-item");
-	if (!item) return null;
-	item.dataset.enabled = `${job.enabled}`;
-
-	const field = (name: string) => item.querySelector<HTMLElement>(`[data-field=${name}]`);
-	const name = field("name");
-	if (name) name.textContent = job.name;
-	const cron = field("cron");
-	if (cron) cron.textContent = `${job.cron} ${job.timezone}`;
-	const state = field("state");
-	if (state) {
-		state.textContent = job.enabled ? `next ${formatDate(job.next_run)}` : "disabled";
-		state.classList.toggle("tag-ok", job.enabled);
-	}
-	const meta = field("meta");
-	if (meta) meta.textContent = describeParams(job.params);
-	const last = field("last");
-	if (last) last.textContent = job.last_run_at ? `last run ${formatDate(job.last_run_at)}: ${job.last_result ?? "?"}` : "never ran";
-
-	const action = (name: string, handler: () => void) =>
-		item.querySelector(`[data-action=${name}]`)?.addEventListener("click", handler);
-
-	action("run", async () => {
-		pullCurtain(true, `Running "${job.name}"`);
-		const response = await api.post<{ result: string }>(`/api/jobs/${job.id}/run`);
-		pullCurtain(false);
-		report(ok(response) ? `"${job.name}": ${response.data.result}` : `Run failed: ${errorText(response)}`);
-		loadJobs();
-	});
-	const toggle = item.querySelector<HTMLButtonElement>("[data-action=toggle]");
-	if (toggle) toggle.textContent = job.enabled ? "disable" : "enable";
-	action("toggle", async () => {
-		pullCurtain(true);
-		const response = await api.put(`/api/jobs/${job.id}`, { ...job, enabled: !job.enabled });
-		pullCurtain(false);
-		if (!ok(response)) report(`Update failed: ${errorText(response)}`);
-		loadJobs();
-	});
-	action("edit", () => setEditing(job));
-	action("delete", async () => {
-		if (!confirm(`Delete job "${job.name}"?`)) return;
-		pullCurtain(true);
-		const response = await api.del(`/api/jobs/${job.id}`);
-		pullCurtain(false);
-		if (!ok(response)) report(`Delete failed: ${errorText(response)}`);
-		if (editing?.id === job.id) setEditing(null);
-		loadJobs();
+	const action = (caption: string, handler: () => void) => mudcrack({
+		tagName: "button",
+		className: "lineout",
+		contents: caption,
+		events: { click: handler }
 	});
 
-	return item;
+	return mudcrack({
+		className: "lineout job-item list",
+		attributes: { "data-enabled": `${job.enabled}` },
+		contents: [
+			mudcrack({
+				className: "row-wrap baseline",
+				contents: [
+					mudcrack({ tagName: "span", className: "job-name", contents: job.name }),
+					mudcrack({ tagName: "code", contents: `${job.cron} ${job.timezone}` }),
+					mudcrack({
+						tagName: "span",
+						className: job.enabled ? "tag tag-ok" : "tag",
+						contents: job.enabled ? `next ${formatDate(job.next_run)}` : "disabled"
+					})
+				]
+			}),
+			mudcrack({ className: "hint", contents: describeParams(job.params) }),
+			mudcrack({
+				className: "hint",
+				contents: job.last_run_at ? `last run ${formatDate(job.last_run_at)}: ${job.last_result ?? "?"}` : "never ran"
+			}),
+			mudcrack({
+				className: "row-wrap",
+				contents: [
+					action("run now", () => runJob(job)),
+					action(job.enabled ? "disable" : "enable", () => toggleJob(job)),
+					action("edit", () => setEditing(job)),
+					action("delete", () => deleteJob(job))
+				]
+			})
+		]
+	});
 }

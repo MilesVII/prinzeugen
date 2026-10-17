@@ -1,4 +1,5 @@
-import { api, ok, errorText, fromTemplateFirst, el } from "./utils/utils";
+import { mudcrack } from "rampike";
+import { api, ok, errorText, el } from "./utils/utils";
 import { Grabbers } from "./utils/grabbers";
 import type { Grabber, GrabberType } from "./utils/grabbers";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
@@ -15,18 +16,13 @@ export async function downloadGrabbers(): Promise<any[] | null> {
 export function displayGrabbers(grabs: any[]){
 	const list = el("#grabbers-list");
 	if (!list) return;
-	list.innerHTML = "";
-
-	grabs.forEach((g, i) => {
+	list.replaceChildren(...grabs.flatMap((g, i) => {
 		const meta: Grabber | undefined = Grabbers[g.type as GrabberType];
-		if (!meta) return;
-		const proto = renderGrabber(g.type, i);
-		if (!proto) return;
-
-		meta.fill(proto, g);
-
-		list.appendChild(proto);
-	});
+		const card = meta && renderGrabber(g.type, i);
+		if (!meta || !card) return [];
+		meta.fill(card, g);
+		return [card];
+	}));
 }
 
 export async function batchGrab(){
@@ -98,47 +94,45 @@ export async function saveGrabbers(){
 }
 
 export function addGrabber(type: GrabberType){
-	const list = el("#grabbers-list");
-	const proto = renderGrabber(type);
-	if (proto && list) list.appendChild(proto);
+	const card = renderGrabber(type);
+	if (card) el("#grabbers-list")?.append(card);
 }
 
 export function renderGrabber(type: GrabberType, index?: number) {
 	const meta = Grabbers[type];
 	if (!meta) return null;
 
-	const proto = fromTemplateFirst("generic-grabber");
-	if (!proto) return null;
-	const buttons = proto.querySelector("div");
-	if (!buttons) return null;
-
-	proto.dataset.grabberForm = type;
-
-	proto.appendChild(forms.renderForm(meta.form));
-
-	const [grab, less, remv] = [
-		buttons.querySelector<HTMLButtonElement>(`[data-grabber-button="grab"]`),
-		buttons.querySelector<HTMLButtonElement>(`[data-grabber-button="less"]`),
-		buttons.querySelector<HTMLButtonElement>(`[data-grabber-button="remv"]`)
-	];
-
-	remv?.addEventListener("click", () => {
-		proto.remove();
+	// a grabber that isn't saved yet has no index on the server, so it can't grab
+	const unsaved = index === undefined;
+	const grabButton = (caption: string, batchLimit?: number) => mudcrack({
+		tagName: "button",
+		className: "lineout",
+		contents: caption,
+		attributes: { disabled: unsaved ? "" : null },
+		events: { click: () => index !== undefined && selectiveGrab(index, batchLimit) }
 	});
 
-	if (index === undefined){
-		const hint = document.createElement("div");
-		hint.className = "placeholder";
-		hint.textContent = "save grabbers before grabbing";
-		proto.insertBefore(hint, proto.children[0] ?? null);
-		if (grab) grab.disabled = true;
-		if (less) less.disabled = true;
-	} else {
-		if (grab) grab.addEventListener("click", () => selectiveGrab(index));
-		if (less) less.addEventListener("click", () => selectiveGrab(index, 50));
-	}
+	const card: HTMLElement = mudcrack({
+		className: "lineout grabber list",
+		attributes: { "data-grabber-form": type },
+		contents: [
+			unsaved && mudcrack({ className: "placeholder", contents: "save grabbers before grabbing" }),
+			...forms.renderForm(meta.form),
+			mudcrack({
+				className: "row-wrap",
+				contents: [
+					grabButton("grab"),
+					grabButton("grab less", 50),
+					mudcrack({
+						tagName: "button",
+						className: "lineout",
+						contents: "remove",
+						events: { click: () => card.remove() }
+					})
+				]
+			})
+		]
+	});
 
-	proto.appendChild(buttons);
-
-	return proto;
+	return card;
 }

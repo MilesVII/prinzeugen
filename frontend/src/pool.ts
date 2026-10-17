@@ -1,4 +1,5 @@
-import { api, ok, fromTemplateFirst, el, isVideoUrl } from "./utils/utils";
+import { mudcrack } from "rampike";
+import { api, ok, el, isVideoUrl } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import type { RampikePagination } from "./components/pagination";
 
@@ -36,23 +37,16 @@ export async function loadMessagePool(page = 0){
 	pullCurtain(false);
 	if (!ok(rows) || !Array.isArray(rows.data)) return;
 
-	container.innerHTML = "";
-	for (const row of rows.data){
-		const proto = fromTemplateFirst("generic-pool-item");
-		if (!proto) return;
-
-		proto.dataset.id = row.id;
-		proto.dataset.failed = `${row.failed}`;
-		const img = proto.querySelector("img");
-		if (!img) return;
-
-		img.title = generateTitle(row);
-		img.loading = "lazy";
-		img.src = previewUrl(row.message);
-		proto.addEventListener("click", () => setPreviewPost(row));
-
-		container.append(proto);
-	}
+	container.replaceChildren(...rows.data.map(row => mudcrack({
+		tagName: "article",
+		className: "lineout pool-item",
+		attributes: { "data-id": row.id, "data-failed": `${row.failed}` },
+		events: { click: () => setPreviewPost(row) },
+		contents: [mudcrack({
+			tagName: "img",
+			attributes: { loading: "lazy", alt: "", title: generateTitle(row), src: previewUrl(row.message) }
+		})]
+	})));
 
 	const postCount = rows.data[0]?.total || 0;
 	pager.pageCount = Math.ceil(postCount / STRIDE);
@@ -81,45 +75,25 @@ function setPreviewPost(row: any){
 		picture.title = generateTitle(row);
 	}
 
-	const controls = dialog.querySelector("#pool-preview-controls");
-	if (!controls) return;
-	controls.innerHTML = "";
-
-	function button(caption: string, action: () => void) {
-		const b = document.createElement("button");
-		b.className = "lineout";
-		b.textContent = caption;
-		b.addEventListener("click", action);
-		return b;
-	}
-
-	const linkset: {text: string, url: string}[] = (row.message?.links || []);
-	const links = linkset.map(link => {
-		const anchor = document.createElement("a");
-		anchor.textContent = link.text;
-		anchor.href = link.url;
-		anchor.className = "lineout";
-		anchor.target = "_blank";
-		anchor.rel = "noreferrer";
-		return anchor;
+	const button = (caption: string, action: () => void) => mudcrack({
+		tagName: "button",
+		className: "lineout",
+		contents: caption,
+		events: { click: action }
 	});
+	const links: { text: string, url: string }[] = row.message?.links ?? [];
+	const tags = ["absurdres", "animated"].filter(tag => row.message?.tags?.includes(tag));
 
-	const tags = ["absurdres", "animated"]
-		.filter(item => row.message?.tags?.includes(item))
-		.map(tag => {
-			const pill = document.createElement("span");
-			pill.className = "tag tag-media";
-			pill.textContent = tag;
-			return pill;
-		});
-
-	const failed = row.failed ? [button("unfail", () => unfailPost(row.id).then(() => dialog.close()))] : [];
-
-	controls.append(
-		...links,
-		...tags,
+	dialog.querySelector("#pool-preview-controls")?.replaceChildren(
+		...links.map(link => mudcrack({
+			tagName: "a",
+			className: "lineout",
+			contents: link.text,
+			attributes: { href: link.url, target: "_blank", rel: "noreferrer" }
+		})),
+		...tags.map(tag => mudcrack({ tagName: "span", className: "tag tag-media", contents: tag })),
 		button("unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
-		...failed,
+		row.failed ? button("unfail", () => unfailPost(row.id).then(() => dialog.close())) : "",
 		button("log details", () => console.log(row))
 	);
 

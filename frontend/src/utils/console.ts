@@ -1,3 +1,5 @@
+import { mudcrack } from "rampike";
+
 const LABEL = "console";
 
 function elements() {
@@ -30,7 +32,5 @@ export function report(message: string) {
 	if (!details.open)
 		setUnread(parseInt(details.dataset.unread ?? "0", 10) + 1);
 
-	const entry = document.createElement("div");
-	entry.textContent = message;
-	log.prepend(entry);
+	log.prepend(mudcrack({ contents: message }));
 }

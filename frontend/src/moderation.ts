@@ -1,4 +1,5 @@
-import { api, ok, fromTemplateFirst, el, isVideoUrl, createPreviewVideo } from "./utils/utils";
+import { mudcrack } from "rampike";
+import { api, ok, el, isVideoUrl, createPreviewVideo } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import { isBusy as upscalerIsBusy, loadTasks, runTasks, flushTasks } from "./utils/upscaler";
 import { PLACEHOLDER_URL } from "./pool";
@@ -18,18 +19,11 @@ export async function reloadModerables(){
 export function displayModerables(messages: any[]){
 	const list = el("#moderables-list");
 	if (!list) return;
-	list.innerHTML = "";
-	messages.forEach(m => {
-		const item = renderModerable(m.message, m.id, m.cache_url ?? null);
-		if (item) list.append(item);
-	});
+	list.replaceChildren(...messages.flatMap(m => renderModerable(m.message, m.id, m.cache_url ?? null) ?? []));
 }
 
 function renderTag(text: string, kind: "artist" | "nsfw" | "media"){
-	const e = document.createElement("span");
-	e.className = `tag tag-${kind}`;
-	e.textContent = text;
-	return e;
+	return mudcrack({ tagName: "span", className: `tag tag-${kind}`, contents: text });
 }
 
 function renderModerable(message: any, id: string, cacheUrl: string | null){
@@ -38,94 +32,87 @@ function renderModerable(message: any, id: string, cacheUrl: string | null){
 		return;
 	}
 
-	const proto = fromTemplateFirst("generic-moderable");
-	if (!proto) return;
-
-	proto.dataset.id = id;
-	proto.dataset.original = message.content;
-	proto.dataset.ref = message.reference;
-	if (message.cached) proto.dataset.upscaled = "weewee";
-
-	proto.addEventListener("click", () => proto.focus());
-
-	const preview = message.cached ? message.cachedContent.preview : message.preview;
-	const source = message.links[0].url;
-
-	const link = proto.querySelector("a");
-	if (link) link.href = source;
-	const image = proto.querySelector("img");
-	if (image) {
-		image.loading = "lazy";
-		image.src = cacheUrl ?? PLACEHOLDER_URL;
-	}
-	// served from the server's media cache; the upscaler skips anything marked upscaled
-	if (cacheUrl) {
-		proto.dataset.upscaled = "cache";
-		proto.dataset.cached = "true";
-	}
-
-	const tags = proto.querySelector(".moderable-info");
-	if (tags){
-		if (message.artists)
-			message.artists.forEach((artist: string) =>
-				tags.append(renderTag(`🎨 ${artist}`, "artist"))
-			);
-		if (message.nsfw)
-			tags.append(renderTag("nsfw", "nsfw"));
-		if (message.tags?.includes("animated"))
-			tags.append(renderTag("animated", "media"));
-		if (message.tags?.includes("animated_gif"))
-			tags.append(renderTag("gif", "media"));
-		if (message.tags?.includes("video"))
-			tags.append(renderTag("video", "media"));
-	}
-
-	proto.querySelectorAll<HTMLElement>("[data-moderable-button]").forEach(b => {
-		if (b.dataset.moderableButton === "approve"){
-			b.addEventListener("click", e => {
-				e.stopPropagation();
-				proto.classList.remove("rejected");
-				proto.classList.add("approved");
-			});
-		} else {
-			b.addEventListener("click", e => {
-				e.stopPropagation();
-				proto.classList.add("rejected");
-				proto.classList.remove("approved");
-			});
-		}
-	});
+	const source: string = message.links[0].url;
+	const tags: string[] = message.tags ?? [];
 
 	// Cached videos get a real player instead of the <a><img> preview. It plays while the card
 	// has focus, so stepping through with the keyboard previews each clip in turn.
-	if (cacheUrl && isVideoUrl(cacheUrl)) {
-		const video = createPreviewVideo(cacheUrl);
-		proto.querySelector("a")?.replaceWith(video);
-		const playIfFocused = () => {
-			if (proto.contains(document.activeElement)) video.play().catch(() => {});
-		};
-		proto.addEventListener("focusin", playIfFocused);
-		proto.addEventListener("focusout", () => video.pause());
-		// focus can arrive before the clip has loaded
-		video.addEventListener("canplay", playIfFocused, { once: true });
+	const video = cacheUrl && isVideoUrl(cacheUrl) ? createPreviewVideo(cacheUrl) : null;
+	const playIfFocused = () => {
+		if (video && card.contains(document.activeElement)) video.play().catch(() => {});
+	};
+	// focus can arrive before the clip has loaded
+	video?.addEventListener("canplay", playIfFocused, { once: true });
 
-		// the player replaced the link, keep a way to open the post
-		const open = document.createElement("a");
-		open.className = "tag tag-media";
-		open.href = source;
-		open.target = "_blank";
-		open.rel = "noreferrer";
-		open.tabIndex = -1;
-		open.textContent = "open ↗";
-		open.addEventListener("click", e => e.stopPropagation());
-		tags?.append(open);
-	}
+	const media = video ?? mudcrack({
+		tagName: "a",
+		attributes: { href: source, target: "_blank", rel: "noreferrer", tabindex: -1 },
+		contents: [mudcrack({ tagName: "img", attributes: { loading: "lazy", alt: "", src: cacheUrl ?? PLACEHOLDER_URL } })]
+	});
 
-	proto.addEventListener("focusin", () => proto.scrollIntoView({ block: "center" }));
-	// keeps focus on the card (not the player) so the , and . shortcuts keep working
-	proto.addEventListener("mousedown", e => e.preventDefault());
+	const decision = (caption: string, approved: boolean) => mudcrack({
+		tagName: "button",
+		className: "lineout",
+		contents: caption,
+		attributes: { tabindex: -1, "data-moderable-button": approved ? "approve" : "reject" },
+		events: {
+			click: event => {
+				event.stopPropagation();
+				card.classList.toggle("approved", approved);
+				card.classList.toggle("rejected", !approved);
+			}
+		}
+	});
 
-	return proto;
+	const card: HTMLDivElement = mudcrack({
+		className: "moderable lineout list",
+		attributes: {
+			tabindex: 0,
+			"data-id": id,
+			"data-original": message.content,
+			"data-ref": message.reference,
+			// served from the server's media cache; the upscaler skips anything marked upscaled
+			"data-upscaled": cacheUrl ? "cache" : message.cached ? "weewee" : null,
+			"data-cached": cacheUrl ? "true" : null
+		},
+		events: {
+			click: () => card.focus(),
+			focusin: () => {
+				card.scrollIntoView({ block: "center" });
+				playIfFocused();
+			},
+			focusout: () => video?.pause(),
+			// keeps focus on the card (not the player) so the , and . shortcuts keep working
+			mousedown: event => event.preventDefault()
+		},
+		contents: [
+			media,
+			mudcrack({
+				className: "row-wrap moderable-info",
+				contents: [
+					...(message.artists ?? []).map((artist: string) => renderTag(`🎨 ${artist}`, "artist")),
+					message.nsfw && renderTag("nsfw", "nsfw"),
+					tags.includes("animated") && renderTag("animated", "media"),
+					tags.includes("animated_gif") && renderTag("gif", "media"),
+					tags.includes("video") && renderTag("video", "media"),
+					// the player replaced the link, keep a way to open the post
+					video && mudcrack({
+						tagName: "a",
+						className: "tag tag-media",
+						contents: "open ↗",
+						attributes: { href: source, target: "_blank", rel: "noreferrer", tabindex: -1 },
+						events: { click: event => event.stopPropagation() }
+					})
+				]
+			}),
+			mudcrack({
+				className: "row-wrap moderable-actions",
+				contents: [decision("approve", true), decision("reject", false)]
+			})
+		]
+	});
+
+	return card;
 }
 
 export async function upscalePreviews(){

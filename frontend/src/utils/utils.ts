@@ -1,3 +1,5 @@
+import { mudcrack } from "rampike";
+
 const SESSION_KEY = "session";
 
 export type Session = { token: string };
@@ -73,15 +75,6 @@ export function el<T extends Element = HTMLElement>(query: string, root: ParentN
 	return root.querySelector<T>(query);
 }
 
-export function fromTemplate(id: string) {
-	return document.querySelector<HTMLTemplateElement>(`template#${id}`)?.content.cloneNode(true) as DocumentFragment | null ?? null;
-}
-
-export function fromTemplateFirst<T extends HTMLElement = HTMLElement>(id: string): T | null {
-	const fragment = fromTemplate(id);
-	return (fragment?.firstElementChild as T | null) ?? null;
-}
-
 export function safe<T>(cb: () => T): T | null {
 	try {
 		return cb();
@@ -131,16 +124,14 @@ export function isVideoUrl(url: string | null | undefined) {
 }
 
 /** Muted looping player sized like the image previews; muted so play() is allowed without a click */
-export function createPreviewVideo(src: string, className = "") {
-	const video = document.createElement("video");
-	video.src = src;
-	video.className = className;
-	video.controls = true;
-	video.loop = true;
+export function createPreviewVideo(src: string, options: Parameters<typeof mudcrack<"video">>[0] = {}) {
+	const video = mudcrack({
+		tagName: "video",
+		...options,
+		attributes: { controls: "", loop: "", playsinline: "", preload: "metadata", tabindex: -1, src, ...options.attributes }
+	});
+	// the muted attribute only counts when present at creation; the property is what autoplay checks
 	video.muted = true;
-	video.playsInline = true;
-	video.preload = "metadata";
-	video.tabIndex = -1;
 	return video;
 }
 

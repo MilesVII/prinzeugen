@@ -1,3 +1,4 @@
+import { mudcrack } from "rampike";
 import { api, ok, errorText, el, formatDate } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import { report } from "./utils/console";
@@ -37,43 +38,35 @@ export async function loadOps() {
 		return;
 	}
 
-	container.innerHTML = "";
-	let anyRunning = false;
-	response.data.forEach(op => {
-		anyRunning ||= op.running;
+	container.replaceChildren(...response.data.map(renderOp));
+	if (response.data.some(op => op.running)) schedulePoll();
+}
 
-		const box = document.createElement("details");
-		box.className = "lineout";
-		box.open = op.running;
+function describeState(op: OpStatus) {
+	if (op.running) return `running since ${formatDate(op.startedAt)}`;
+	if (op.finishedAt) return `finished ${formatDate(op.finishedAt)}, exit ${op.exitCode}`;
+	if (op.log) return `last log ${op.log.file}`;
+	return "never ran";
+}
 
-		const summary = document.createElement("summary");
-		summary.className = "row-compact baseline";
-		const title = document.createElement("span");
-		title.textContent = op.name;
-		const state = document.createElement("span");
-		state.className = "hint";
-		state.textContent = op.running
-			? `running since ${formatDate(op.startedAt)}`
-			: op.finishedAt
-				? `finished ${formatDate(op.finishedAt)}, exit ${op.exitCode}`
-				: op.log
-					? `last log ${op.log.file}`
-					: "never ran";
-		summary.append(title, state);
-
-		const description = document.createElement("div");
-		description.className = "hint";
-		description.textContent = op.description;
-
-		const log = document.createElement("pre");
-		log.className = "ops-log";
-		log.textContent = op.log?.tail || "(no log yet)";
-
-		box.append(summary, description, log);
-		container.append(box);
+function renderOp(op: OpStatus) {
+	return mudcrack({
+		tagName: "details",
+		className: "lineout",
+		attributes: { open: op.running ? "" : null },
+		contents: [
+			mudcrack({
+				tagName: "summary",
+				className: "row-compact baseline",
+				contents: [
+					mudcrack({ tagName: "span", contents: op.name }),
+					mudcrack({ tagName: "span", className: "hint", contents: describeState(op) })
+				]
+			}),
+			mudcrack({ className: "hint", contents: op.description }),
+			mudcrack({ tagName: "pre", className: "ops-log", contents: op.log?.tail || "(no log yet)" })
+		]
 	});
-
-	if (anyRunning) schedulePoll();
 }
 
 function schedulePoll(delay = 3000) {

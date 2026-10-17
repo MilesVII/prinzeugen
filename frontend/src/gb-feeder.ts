@@ -1,3 +1,4 @@
+import { mudcrack } from "rampike";
 import { api, safe, zip, load, save, el } from "./utils/utils";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { displayGrabbers, downloadGrabbers } from "./grabbing";
@@ -145,36 +146,21 @@ function renderResults(results: PostCount[]) {
 	const container = el("#refeeder-log");
 	if (!container) return;
 
-	results.forEach(result => {
-		const name = document.createElement("div");
-		name.textContent = result.artist;
+	const VALUES = {
+		error: ["refeeder-log-value-error", "error"],
+		empty: ["refeeder-log-value-error", "no posts found"],
+		exists_in_grabber: ["refeeder-log-value-dupe", "exists in grabber"]
+	} as const;
 
-		const value = document.createElement("div");
-		if (typeof result.count === "number") {
-			value.className = "refeeder-log-value-ok";
-			value.textContent = `${result.count}`;
-		} else {
-			switch (result.count) {
-				case ("error"): {
-					value.className = "refeeder-log-value-error";
-					value.textContent = "error";
-					break;
-				}
-				case ("empty"): {
-					value.className = "refeeder-log-value-error";
-					value.textContent = "no posts found";
-					break;
-				}
-				case ("exists_in_grabber"): {
-					value.className = "refeeder-log-value-dupe";
-					value.textContent = "exists in grabber";
-					break;
-				}
-			}
-		}
-
-		container.append(name, value);
-	});
+	container.append(...results.flatMap(result => {
+		const [className, text] = typeof result.count === "number"
+			? ["refeeder-log-value-ok", `${result.count}`]
+			: VALUES[result.count];
+		return [
+			mudcrack({ contents: result.artist }),
+			mudcrack({ className, contents: text })
+		];
+	}));
 }
 
 function readMemo() {
@@ -256,29 +242,18 @@ export function refreshFeederList() {
 		["light", list.filter(([, count]) => count < 120)]
 	] as const).filter(([, list]) => list.length > 0);
 
-	sections.forEach(([name, section]) => {
-		const title = document.createElement("div");
-		title.className = "refeeder-section";
-		title.textContent = `${name} (${section.length})`;
-		listContainer.append(title);
-
-		[...section]
+	listContainer.append(...sections.flatMap(([name, section]) => [
+		mudcrack({ className: "refeeder-section", contents: `${name} (${section.length})` }),
+		...[...section]
 			.sort(([, a], [, b]) => b - a)
-			.forEach(([artist, count]) => {
-				const row = document.createElement("div");
-				row.className = "refeeder-row";
-
-				const value = document.createElement("div");
-				value.textContent = artist;
-
-				const counter = document.createElement("span");
-				counter.className = "refeeder-list-counter";
-				counter.textContent = `${count}`;
-
-				row.append(value, counter);
-				listContainer.append(row);
-			});
-	});
+			.map(([artist, count]) => mudcrack({
+				className: "refeeder-row",
+				contents: [
+					mudcrack({ contents: artist }),
+					mudcrack({ tagName: "span", className: "refeeder-list-counter", contents: `${count}` })
+				]
+			}))
+	]));
 }
 
 export async function updateFeederList() {

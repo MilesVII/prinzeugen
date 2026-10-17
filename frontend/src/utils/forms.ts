@@ -1,5 +1,4 @@
-import { fromTemplate } from "./utils";
-import { genericFlickerUpdate } from "./flicker";
+import { mudcrack } from "rampike";
 
 export type FieldType = "line" | "list";
 export type FieldSchema<T = Record<string, string>> = {
@@ -23,96 +22,62 @@ export type PEFieldAdditionals = {
 	lineCount?: boolean
 };
 
-function fieldFromTemplate(field: FieldSchema<PEFieldAdditionals>){
-	function getProto(id: string) {
-		const raw = fromTemplate(id);
-		const proto = raw?.firstElementChild;
-		if (proto){
-			return proto;
-		} else {
-			console.error(`Failed to render form field from template "${id}"`);
-			return null;
-		}
-	}
-
-	switch (field.type){
-		case ("line"): {
-			const templateName = "generic-field-line";
-			const proto = getProto(templateName);
-			if (!proto) return null;
-
-			const label = proto.querySelector("label");
-			if (label) label.textContent = field.additional.label;
-
-			const input = proto.querySelector("input");
-			if (!input) {
-				console.error(`Can't find <input> inside "${templateName}" template`);
-				return null;
-			};
-			input.placeholder = field.additional.placeholder ?? "";
-			input.setAttribute(`data-grabber-form-${field.key}`, "");
-
-			return proto;
-		}
-		case ("list"): {
-			const templateName = "generic-field-multiline";
-			const proto = getProto(templateName);
-			if (!proto) return null;
-
-			const label = proto.querySelector("label");
-			if (label) label.textContent = field.additional.label;
-
-			const textarea = proto.querySelector("textarea");
-			if (!textarea) {
-				console.error(`Can't find <textarea> inside "${templateName}" template`);
-				return null;
-			}
-			textarea.placeholder = field.additional.placeholder ?? "";
-			textarea.setAttribute(`data-grabber-form-${field.key}`, "");
-
-			if (field.additional.lineCount) {
-				const textareaFU = () => genericFlickerUpdate(
-					"textarea",
-					"legend > span",
-					(content) => ([`${content.split("\n").filter(line => line.trim().length > 0).length}`, undefined]),
-					proto
-				);
-				textarea.addEventListener("input", textareaFU);
-			}
-
-			return proto;
-		}
-	}
+function countLines(text: string) {
+	return text.split("\n").filter(line => line.trim().length > 0).length;
 }
 
-export function renderForm(schema: FormSchema<PEFieldAdditionals>): DocumentFragment {
-	const container = new DocumentFragment();
-	const rendered = schema
-		.map(s => fieldFromTemplate(s))
-		.filter(s => s !== null) as Element[];
-	container.append(...rendered);
-	return container;
+/** fieldset with a legend; the input carries data-grabber-form-<key> so read/fill can find it */
+function renderField(field: FieldSchema<PEFieldAdditionals>) {
+	const { label, placeholder = "", lineCount } = field.additional;
+	const marker = `data-grabber-form-${field.key}`;
+
+	if (field.type === "line") {
+		return mudcrack({
+			tagName: "fieldset",
+			contents: [
+				mudcrack({ tagName: "legend", contents: [mudcrack({ tagName: "label", contents: label })] }),
+				mudcrack({
+					tagName: "input",
+					className: "strip",
+					attributes: { type: "text", autocomplete: "off", placeholder, [marker]: "" }
+				})
+			]
+		});
+	}
+
+	const counter = lineCount ? mudcrack({ tagName: "span", className: "hint" }) : null;
+	return mudcrack({
+		tagName: "fieldset",
+		contents: [
+			mudcrack({
+				tagName: "legend",
+				contents: [mudcrack({ tagName: "label", contents: label }), counter]
+			}),
+			mudcrack({
+				tagName: "textarea",
+				className: "strip",
+				attributes: { rows: 4, spellcheck: "false", placeholder, [marker]: "" },
+				events: counter ? {
+					input: (_, textarea) => { counter.textContent = `${countLines(textarea.value)}`; }
+				} : {}
+			})
+		]
+	});
+}
+
+export function renderForm(schema: FormSchema<PEFieldAdditionals>): HTMLElement[] {
+	return schema.map(renderField);
 }
 
 export function getFieldElement(container: HTMLElement, fieldKey: string) {
-	return container.querySelector(`*[data-grabber-form-${fieldKey}]`);
+	return container.querySelector<HTMLInputElement | HTMLTextAreaElement>(`*[data-grabber-form-${fieldKey}]`);
 }
 
 export function readForm(container: HTMLElement, schema: FormSchema<PEFieldAdditionals>) {
-	function readField(fieldKey: string, fieldType: string){
-		const fieldElement = getFieldElement(container, fieldKey);
-		if (!fieldElement) return null;
-
-		return (fieldElement as any)?.value ?? null;
-	}
-
-	const r: Record<string, string> = {};
-
+	const r: Record<string, string | null> = {};
 	schema.forEach(s => {
-		const v = readField(s.key, s.type);
-		r[s.key] = v;
+		r[s.key] = getFieldElement(container, s.key)?.value ?? null;
 	});
-
 	return r;
 }
 
@@ -120,7 +85,7 @@ export function fillForm(form: HTMLElement, data: Record<string, string>) {
 	for (const key of Object.keys(data)){
 		const field = getFieldElement(form, key);
 		if (field) {
-			(field as any).value = data[key];
+			field.value = data[key] ?? "";
 			field.dispatchEvent(new Event("input"));
 		}
 	}

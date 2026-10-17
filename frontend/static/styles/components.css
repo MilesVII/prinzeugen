@@ -187,6 +187,7 @@ summary.settings-label {
 	color: var(--color-subtext);
 }
 
+/* slanted bands of the theme's own palette; the element carries the .theme-* class */
 .theme-selector {
 	width: 96px;
 	height: 24px;
@@ -194,8 +195,17 @@ summary.settings-label {
 	border-radius: var(--dims-smol);
 	cursor: pointer;
 	transition: border-color .2s ease, box-shadow .2s ease;
+	background: linear-gradient(
+		105deg,
+		var(--color-base) 0 22%,
+		var(--color-secondary) 22% 40%,
+		var(--color-accent) 40% 58%,
+		var(--color-text) 58% 76%,
+		var(--color-base) 76%
+	);
 }
-.theme-selector:hover {
+.theme-selector:hover, .theme-selector:focus-visible {
+	outline: none;
 	border-color: var(--color-accent);
 	box-shadow: 0 0 var(--dims-smol) var(--color-accent);
 }

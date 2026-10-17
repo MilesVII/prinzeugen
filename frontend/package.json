@@ -8,7 +8,7 @@
 		"typecheck": "tsc --noEmit -p tsconfig.json"
 	},
 	"dependencies": {
-		"rampike": "^0.0.13"
+		"rampike": "0.0.14"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.2.12",

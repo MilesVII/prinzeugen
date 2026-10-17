@@ -2,7 +2,7 @@ import { define as defineTabs, switchTab } from "./components/tabs";
 import { define as definePages } from "./components/pagination";
 import {
 	api, ok, errorText, safe, setElementValue, getSession, setSession,
-	fromTemplateFirst, el, formatDate, isTyping, type Method
+	el, formatDate, isTyping, type Method
 } from "./utils/utils";
 import type { GrabberType } from "./utils/grabbers";
 import { listenToKeyboard } from "./utils/io";
@@ -331,22 +331,37 @@ async function loadApiTokens() {
 	const response = await api.get<ApiToken[]>("/api/tokens");
 	if (!ok(response)) return;
 
-	list.querySelectorAll(".token-item").forEach(e => e.remove());
-	response.data.forEach(token => {
-		const item = fromTemplateFirst("template-token-item");
-		if (!item) return;
-		const name = item.querySelector("[data-field=name]");
-		const meta = item.querySelector("[data-field=meta]");
-		if (name) name.textContent = token.name ?? `token #${token.id}`;
-		if (meta) meta.textContent = `created ${formatDate(token.created_at)} · last used ${formatDate(token.last_used_at)}`;
-		item.querySelector("[data-action=revoke]")?.addEventListener("click", async () => {
-			pullCurtain(true);
-			await api.del(`/api/tokens/${token.id}`);
-			pullCurtain(false);
-			loadApiTokens();
-		});
-		list.append(item);
-	});
+	// whole rows go: the revoke button sits next to the item, not inside it
+	list.querySelectorAll(".token-row").forEach(e => e.remove());
+	list.append(...response.data.map(token => mudcrack({
+		className: "row-compact token-row",
+		contents: [
+			mudcrack({
+				className: "lineout token-item wide",
+				contents: [
+					mudcrack({ tagName: "span", className: "grow", contents: token.name ?? `token #${token.id}` }),
+					mudcrack({
+						tagName: "span",
+						className: "hint",
+						contents: `created ${formatDate(token.created_at)} · last used ${formatDate(token.last_used_at)}`
+					})
+				]
+			}),
+			mudcrack({
+				tagName: "button",
+				className: "lineout",
+				contents: "revoke",
+				events: {
+					click: async () => {
+						pullCurtain(true);
+						await api.del(`/api/tokens/${token.id}`);
+						pullCurtain(false);
+						loadApiTokens();
+					}
+				}
+			})
+		]
+	})));
 }
 
 async function createApiToken() {
@@ -399,22 +414,22 @@ async function loadUsers() {
 	const response = await api.get<UserRow[]>("/api/users");
 	if (!ok(response)) return;
 
-	list.innerHTML = "";
-	response.data.forEach(user => {
-		const item = fromTemplateFirst("template-user-item");
-		if (!item) return;
-		const id = item.querySelector("[data-field=id]");
-		const name = item.querySelector("[data-field=name]");
-		const meta = item.querySelector("[data-field=meta]");
-		if (id) id.textContent = `#${user.id}`;
-		if (name) name.textContent = user.name ?? "(unnamed)";
-		if (meta) meta.textContent = [
-			user.role,
-			user.can_invite && user.role !== "admin" ? "can invite" : null,
-			user.has_password ? null : "no password"
-		].filter(Boolean).join(" · ");
-		list.append(item);
-	});
+	list.replaceChildren(...response.data.map(user => mudcrack({
+		className: "lineout user-item",
+		contents: [
+			mudcrack({ tagName: "span", className: "hint", contents: `#${user.id}` }),
+			mudcrack({ tagName: "span", className: "grow", contents: user.name ?? "(unnamed)" }),
+			mudcrack({
+				tagName: "span",
+				className: "hint",
+				contents: [
+					user.role,
+					user.can_invite && user.role !== "admin" ? "can invite" : null,
+					user.has_password ? null : "no password"
+				].filter(Boolean).join(" · ")
+			})
+		]
+	})));
 }
 
 async function createUser() {

@@ -25,7 +25,7 @@
     "frontend": {
       "name": "frontend",
       "dependencies": {
-        "rampike": "^0.0.13",
+        "rampike": "0.0.14",
       },
       "devDependencies": {
         "@types/bun": "^1.2.12",
@@ -78,7 +78,7 @@
 
     "postgres": ["postgres@3.4.9", "", {}, "sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw=="],
 
-    "rampike": ["rampike@0.0.13", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-lX6k6YOun9kuJQxROaNADJRxiBDdBSPu5LH67/GVlS7zJQQuZZHNu/+vwpw14TDQDrnqMG9cdfEtZguhMpBKxA=="],
+    "rampike": ["rampike@0.0.14", "", {}, "sha512-aVMpcKpAu0LXEkYPBPMLTseYMKGkUY5K2vTvUeM7mFTDjB16DtVRKGnryt7A625ExSASuI/b8YZPIa95V+0oLw=="],
 
     "strtok3": ["strtok3@10.3.5", "", { "dependencies": { "@tokenizer/token": "^0.3.0" } }, "sha512-ki4hZQfh5rX0QDLLkOCj+h+CVNkqmp/CMf8v8kZpkNVK6jGQooMytqzLZYUVYIZcFZ6yDB70EfD8POcFXiF5oA=="],
 

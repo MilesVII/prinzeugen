@@ -1,4 +1,4 @@
-import { fromTemplateFirst } from "./utils";
+import { mudcrack } from "rampike";
 
 const STORAGE_KEY_THEME = "theme";
 const CSS_THEMES_FILE = "theme.css";
@@ -24,18 +24,24 @@ export function renderThemeSelectors(container: HTMLElement) {
 		.map(r => r.selectorText.match(/^\.theme-([\w-]+)$/)?.[1])
 		.filter((name): name is string => !!name);
 
-	container.innerHTML = "";
-	container.append(...names.map(selectorItem).filter((e): e is SVGElement => e !== null));
+	container.replaceChildren(...names.map(selectorItem));
 }
 
+/** The swatch paints the theme's own variables (see .theme-selector), so it needs only the theme class */
 function selectorItem(name: string) {
-	const swatch = fromTemplateFirst<any>("template-theme-selector") as SVGElement | null;
-	if (!swatch) return null;
 	const themeClassName = `theme-${name}`;
-	swatch.classList.add(themeClassName);
-	swatch.setAttribute("title", name.replaceAll("-", " "));
-	swatch.addEventListener("click", () => switchTheme(themeClassName));
-	return swatch;
+	return mudcrack({
+		className: `theme-selector ${themeClassName}`,
+		attributes: { title: name.replaceAll("-", " "), role: "button", tabindex: 0 },
+		events: {
+			click: () => switchTheme(themeClassName),
+			keydown: event => {
+				if (event.key !== "Enter" && event.key !== " ") return;
+				event.preventDefault();
+				switchTheme(themeClassName);
+			}
+		}
+	});
 }
 
 function switchTheme(themeClassName: string) {
