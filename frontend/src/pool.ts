@@ -58,7 +58,8 @@ function setPreviewPost(row: any){
 	const picture = dialog.querySelector("img");
 	if (!picture) return;
 
-	picture.src = previewUrl(row.message);
+	// the grid keeps gelbooru's tiny previews; the dialog shows the cached copy when there is one
+	picture.src = row.cache_url ?? previewUrl(row.message);
 	picture.title = generateTitle(row);
 
 	const controls = dialog.querySelector("#pool-preview-controls");

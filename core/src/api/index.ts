@@ -5,6 +5,7 @@ import { poolRoutes } from "./pool.ts";
 import { publishRoutes } from "./publish.ts";
 import { jobRoutes } from "./jobs.ts";
 import { opsRoutes } from "./ops.ts";
+import { cacheRoutes } from "./cache.ts";
 
 export const api = new Elysia({ prefix: "/api" })
 	.get("/debug", () => ({ ok: true }))
@@ -13,4 +14,5 @@ export const api = new Elysia({ prefix: "/api" })
 	.use(poolRoutes)
 	.use(publishRoutes)
 	.use(jobRoutes)
-	.use(opsRoutes);
+	.use(opsRoutes)
+	.use(cacheRoutes);

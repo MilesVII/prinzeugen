@@ -473,6 +473,20 @@ summary.settings-label {
 	border-top: 1px solid var(--color-secondary);
 }
 
+.cache-panel {
+	padding: var(--dims-reg);
+}
+.cache-title {
+	font: var(--font-bold);
+}
+.cache-error {
+	color: var(--color-bad);
+	word-break: break-word;
+}
+.cache-panel progress {
+	height: 6px;
+}
+
 .api-hint {
 	font: var(--font-smol);
 	color: var(--color-subtext);

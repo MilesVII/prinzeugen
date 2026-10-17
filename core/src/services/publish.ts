@@ -2,6 +2,7 @@ import { sql, type PoolRow } from "../db.ts";
 import { env } from "../env.ts";
 import { chunk, tg, tgReport, felch, parseTelegramTarget, escapeMarkdown, type TelegramResponse } from "../utils.ts";
 import { validateMessage, type Message, type TelegramButton } from "../grabbers/message.ts";
+import { normalizeMediaUrl, publicCachedResizeUrl, cachedMediaType, removeCacheFiles } from "./media.ts";
 
 export const PUB_FLAGS = [
 	"useproxy",
@@ -67,7 +68,8 @@ async function publishToTelegram(
 	token: string,
 	target: string | number,
 	extras: PublishExtras,
-	flags: PubFlag[]
+	flags: PubFlag[],
+	cacheFile: string | null
 ): Promise<null | unknown> {
 	const validationErrors = validateMessage(message);
 	if (validationErrors.length > 0) return validationErrors;
@@ -117,16 +119,23 @@ async function publishToTelegram(
 		return sent(report) ? null : report;
 	}
 
-	// gelbooru rotates image hosts; these rewrites match what currently resolves
-	const content = message.content
-		.replace(/https:\/\/img.\./g, "https://img4.")
-		.replace(/video-cdn.\./g, "video-cdn4.");
+	const content = normalizeMediaUrl(message.content);
 	message.content = content;
 
-	const meta = await pingContentUrl(content);
-	if (!meta) return `No head?\n${content}`;
-
 	const report: Record<string, unknown> = {};
+
+	// Server-side copy, downscaled by /resize. Doesn't depend on gelbooru being reachable.
+	const fromCache = async () => {
+		if (!cacheFile || message.version !== 4) return false;
+		report.cache = await send(cachedMediaType(cacheFile), publicCachedResizeUrl(cacheFile), message.links);
+		return sent(report.cache as SendReport);
+	};
+
+	const meta = await pingContentUrl(content);
+	if (!meta) {
+		if (await fromCache()) return null;
+		return cacheFile ? { head: `No head?\n${content}`, ...report } : `No head?\n${content}`;
+	}
 
 	report.direct = await send(meta.type, content, message.links);
 	if (sent(report.direct as SendReport)) return null;
@@ -142,6 +151,8 @@ async function publishToTelegram(
 		}
 		return report;
 	}
+
+	if (await fromCache()) return null;
 
 	report.proxy = await send(meta.type === "img" ? "img" : "vid", imageProxy(content), message.links);
 	if (sent(report.proxy as SendReport)) return null;
@@ -203,7 +214,7 @@ export async function publish(user: number, request: PublishRequest): Promise<Pu
 		const post = availablePosts.pop();
 		if (!post) break;
 
-		const error = await publishToTelegram(post.message, post.tg_token ?? "", target, request.extras ?? {}, flags);
+		const error = await publishToTelegram(post.message, post.tg_token ?? "", target, request.extras ?? {}, flags, post.cache_file);
 
 		if (error) {
 			++failed;
@@ -226,6 +237,7 @@ export async function publish(user: number, request: PublishRequest): Promise<Pu
 			} else {
 				await sql`delete from published_logs where post_id = ${post.id}`;
 				await sql`delete from pool where id = ${post.id}`;
+				await removeCacheFiles([post.cache_file]);
 			}
 		}
 	}

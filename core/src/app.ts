@@ -4,6 +4,7 @@ import { env } from "./env.ts";
 import { api } from "./api/index.ts";
 import { resize, detectFormat } from "./resize.ts";
 import { felch, hostAllowed } from "./utils.ts";
+import { isCacheFileName, verifyMediaSignature, cachePath } from "./services/media.ts";
 
 const STATIC_ROOT = resolve(import.meta.dir, "../../frontend/dist");
 export const INDEX = Bun.file(join(STATIC_ROOT, "index.html"));
@@ -68,31 +69,64 @@ export const app = new Elysia()
 		});
 	})
 
-	// Public image/video downscaler used as a fallback source for Telegram uploads
+	// Cached media, for moderation previews. Signed because <img> can't carry a bearer token.
+	.get("/media/:file", async ({ params, query, status, set }) => {
+		if (!isCacheFileName(params.file) || !verifyMediaSignature(params.file, query.sig ?? ""))
+			return status(403, "Forbidden");
+		const file = Bun.file(cachePath(params.file));
+		if (!(await file.exists())) return status(404, "Not cached");
+		set.headers["Cache-Control"] = "private, max-age=86400";
+		return file;
+	}, {
+		query: t.Object({ sig: t.Optional(t.String()) })
+	})
+
+	// Public image/video downscaler used as a fallback source for Telegram uploads.
+	// Reads either a gelbooru URL (?source=) or a signed cache entry (?cached=&sig=).
 	.get("/resize", async ({ query, status }) => {
-		let target: URL;
-		try {
-			target = new URL(query.source);
-		} catch {
-			return status(400, "source must be a URL");
+		let bytes: ArrayBuffer;
+		let mime: string | null;
+
+		if (query.cached) {
+			if (!isCacheFileName(query.cached) || !verifyMediaSignature(query.cached, query.sig ?? ""))
+				return status(403, "Forbidden");
+			const file = Bun.file(cachePath(query.cached));
+			if (!(await file.exists())) return status(404, "Not cached");
+			bytes = await file.arrayBuffer();
+			mime = file.type;
+		} else if (query.source) {
+			let target: URL;
+			try {
+				target = new URL(query.source);
+			} catch {
+				return status(400, "source must be a URL");
+			}
+			if (target.protocol !== "https:" || !hostAllowed(target.hostname, env.resizeHosts))
+				return status(403, "Host not allowed");
+
+			const response = await felch(target.href, {
+				headers: { "Referer": GELBOORU_REFERER }
+			});
+			if (!response.ok) return status(502, "Upstream failed");
+			bytes = await response.arrayBuffer();
+			mime = response.headers.get("Content-Type");
+		} else {
+			return status(400, "source or cached required");
 		}
-		if (target.protocol !== "https:" || !hostAllowed(target.hostname, env.resizeHosts))
-			return status(403, "Host not allowed");
 
-		const response = await felch(target.href, {
-			headers: { "Referer": GELBOORU_REFERER }
-		});
-		if (!response.ok) return status(502, "Upstream failed");
-
-		const format = detectFormat(response.headers.get("Content-Type"));
+		const format = detectFormat(mime);
 		if (!format) return status(415, "Unsupported media type");
 
-		const resized = await resize(await response.arrayBuffer(), format);
+		const resized = await resize(bytes, format);
 		return new Response(resized, {
 			headers: { "Content-Type": format.mime }
 		});
 	}, {
-		query: t.Object({ source: t.String() })
+		query: t.Object({
+			source: t.Optional(t.String()),
+			cached: t.Optional(t.String()),
+			sig: t.Optional(t.String())
+		})
 	})
 
 	// Static frontend with SPA fallback

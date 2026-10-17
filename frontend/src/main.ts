@@ -18,6 +18,7 @@ import { flushTasks } from "./utils/upscaler";
 import { refeed, refreshFeederList, updateFeederList, initFeederCredentials } from "./gb-feeder";
 import { initJobs, loadJobs } from "./jobs";
 import { initOps, loadOps } from "./ops";
+import { initCache, loadCache } from "./cache";
 import { mudcrack } from "rampike";
 
 type User = {
@@ -141,6 +142,7 @@ function wire() {
 	initFeederCredentials();
 	initJobs();
 	initOps();
+	initCache();
 
 	// hash routing for the main tabs, so reloads and back/forward keep the page
 	el("#tabs-main")?.addEventListener("tab-pick", e => {
@@ -201,6 +203,7 @@ function authorize(bundle: UserBundle){
 	if (user.role === "admin") {
 		loadUsers();
 		loadOps();
+		loadCache();
 	}
 
 	applyHash();

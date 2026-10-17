@@ -93,6 +93,30 @@
 										<button class="lineout" id="ops-refresh">refresh</button>
 									</div>
 									<div id="ops-status" class="list"></div>
+
+									<div class="lineout list cache-panel">
+										<div class="row-wrap baseline">
+											<span class="cache-title">media cache</span>
+											<span id="cache-state" class="tag">–</span>
+										</div>
+										<div class="hint">
+											downloads media of posts pending moderation, one at a time.
+											samples for still images, originals for animated posts.
+											used for moderation previews and as a publish fallback.
+										</div>
+										<div id="cache-worker" class="hint"></div>
+										<div id="cache-counts" class="hint"></div>
+										<div id="cache-error" class="hint cache-error" hidden></div>
+										<progress id="cache-disk-bar" class="wide" value="0" max="1"></progress>
+										<div id="cache-disk" class="hint"></div>
+										<div id="cache-sizes" class="hint"></div>
+										<div class="row-wrap">
+											<button class="lineout" id="cache-toggle">start</button>
+											<button class="lineout" id="cache-retry">retry failed</button>
+											<button class="lineout" id="cache-reconcile">reconcile files</button>
+											<button class="lineout" id="cache-refresh">refresh</button>
+										</div>
+									</div>
 								</div>
 							</details>
 						</div>

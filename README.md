@@ -102,10 +102,26 @@ The server is an [Elysia](https://elysiajs.com) app (`core/src/app.ts`). Each ro
 | POST | `/api/jobs/:id/run` | | run once now, returns `{ result }` |
 | GET | `/api/ops` | | admin: status and log tail of backup/deploy |
 | POST | `/api/ops/:name/run` | `name` = `backup` or `deploy` | admin |
+| GET | `/api/cache` | | admin: worker status, queue counts, storage |
+| POST | `/api/cache/start`, `/api/cache/stop` | | admin |
+| POST | `/api/cache/retry`, `/api/cache/reconcile` | | admin |
 
 ### Publishing jobs
 
 The "jobs" tab schedules publish calls inside the server (`croner`, in-process, no external cron needed). Each job is a row in `publish_jobs`: cron pattern, IANA timezone, enabled flag and the same parameters as `POST /api/publish`. The scheduler arms enabled jobs at startup and re-arms a job whenever it is saved; a tick re-reads the row, runs `publish()`, and stores the outcome in `last_result`. Overlapping runs of the same job are skipped. "run now" executes a job immediately and returns its result.
+
+### Media cache
+
+A background worker in the server (`core/src/services/cacheWorker.ts`) downloads media of posts pending moderation into `CACHE_DIR` (default `cache/`). Every `CACHE_INTERVAL_SEC` it takes up to `CACHE_BATCH` uncached V4 posts and fetches them strictly one after another:
+
+- posts tagged `animated` use the original (`message.content`);
+- everything else uses the sample, derived as `.../images/ab/cd/<name>.<ext>` → `...//samples/ab/cd/sample_<name>.jpg`, and falls back to the original on 404.
+
+429, 5xx and timeouts end the batch and are retried on later checks. A post that fails three times, returns non-media, or exceeds `CACHE_MAX_MB` is given up on ("retry failed" in the dashboard queues them again). Older message versions are skipped.
+
+Files follow their rows: rejecting a post, unscheduling it, wiping the pool, or publishing it without `keep` deletes the file. Moderation and the pool preview show the cached copy through signed `/media/<file>` URLs. On publish, after the direct gelbooru URL fails (or gelbooru doesn't answer the HEAD ping), the cached copy is offered to Telegram through `/resize?cached=`, before falling back to resizing from gelbooru.
+
+The admin "server" section on the dashboard starts and stops the worker (remembered across restarts), shows queue counts, disk usage of the cache filesystem, cache and database size, and has "reconcile files" to delete orphaned files and forget rows whose file is gone. The same reconcile runs at startup.
 
 ### Server operations from the dashboard
 

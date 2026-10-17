@@ -20,7 +20,7 @@ export function displayModerables(messages: any[]){
 	if (!list) return;
 	list.innerHTML = "";
 	messages.forEach(m => {
-		const item = renderModerable(m.message, m.id);
+		const item = renderModerable(m.message, m.id, m.cache_url ?? null);
 		if (item) list.append(item);
 	});
 }
@@ -32,7 +32,7 @@ function renderTag(text: string, kind: "artist" | "nsfw" | "media"){
 	return e;
 }
 
-function renderModerable(message: any, id: string){
+function renderModerable(message: any, id: string, cacheUrl: string | null){
 	if (message.version != 3 && message.version != 4){
 		console.error("Unsupported message version");
 		return;
@@ -56,7 +56,12 @@ function renderModerable(message: any, id: string){
 	const image = proto.querySelector("img");
 	if (image) {
 		image.loading = "lazy";
-		image.src = PLACEHOLDER_URL;
+		image.src = cacheUrl ?? PLACEHOLDER_URL;
+	}
+	// served from the server's media cache; the upscaler skips anything marked upscaled
+	if (cacheUrl) {
+		proto.dataset.upscaled = "cache";
+		proto.dataset.cached = "true";
 	}
 
 	const tags = proto.querySelector(".moderable-info");

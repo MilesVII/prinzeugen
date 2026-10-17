@@ -24,7 +24,11 @@ export type PoolRow = {
 	user: number,
 	message: Message,
 	approved: boolean | null,
-	failed: boolean
+	failed: boolean,
+	cache_file: string | null,
+	cache_variant: "sample" | "original" | null,
+	cache_attempts: number,
+	cache_error: string | null
 };
 
 export type ApiTokenRow = {

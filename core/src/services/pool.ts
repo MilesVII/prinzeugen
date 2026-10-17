@@ -1,27 +1,33 @@
 import { sql, type PoolRow } from "../db.ts";
 import { registry as grabbersMeta, type GrabberConfig } from "../grabbers/index.ts";
 import type { Message } from "../grabbers/message.ts";
+import { mediaUrl, removeCacheFiles } from "./media.ts";
 
 export type PoolPageRow = PoolRow & { total: number };
 
-export function getApproved(user: number, limit: number, offset: number) {
-	return sql<PoolPageRow[]>`
+/** Adds a signed URL for the cached media, usable directly in <img> */
+function withCacheUrl<T extends PoolRow>(rows: T[]) {
+	return rows.map(row => ({ ...row, cache_url: row.cache_file ? mediaUrl(row.cache_file) : null }));
+}
+
+export async function getApproved(user: number, limit: number, offset: number) {
+	return withCacheUrl(await sql<PoolPageRow[]>`
 		select *, (count(*) over())::int as total
 			from "pool"
 			where "user" = ${user} and "approved" = true
 			order by "failed" = false, id asc
 			limit ${limit}
 			offset ${offset}
-	`;
+	`);
 }
 
-export function getModerables(user: number, limit = 200) {
-	return sql<PoolRow[]>`
+export async function getModerables(user: number, limit = 200) {
+	return withCacheUrl(await sql<PoolRow[]>`
 		select * from pool
 			where "user" = ${user} and "approved" is null
 			order by id asc
 			limit ${limit}
-	`;
+	`);
 }
 
 export async function getStats(user: number) {
@@ -58,31 +64,39 @@ export async function moderate(user: number, decisions: Decision[]) {
 	if (decisions.length === 0) return;
 	// postgres.js types value lists as string|number, booleans are fine at runtime
 	const rows = decisions.map(({ id, approved }) => [id, approved]) as unknown as (string | number)[][];
-	await sql.begin(async sql => {
+	const removed = await sql.begin(async sql => {
 		await sql`
 			update "pool"
 				set approved = (update_data.approved)::boolean
 				from (values ${sql(rows)}) as update_data(id, approved)
 				where pool.id = (update_data.id)::bigint and pool."user" = ${user}
 		`;
-		await sql`delete from "pool" where "user" = ${user} and "approved" = false`;
+		return sql<{ cache_file: string | null }[]>`
+			delete from "pool" where "user" = ${user} and "approved" = false returning cache_file
+		`;
 	});
+	await removeCacheFiles(removed.map(row => row.cache_file));
 }
 
-// published_logs.post_id references pool.id without cascade, so logs go first
+// published_logs.post_id references pool.id without cascade, so logs go first.
+// Cached media follows its row: when the row goes, the file goes.
 
-export function wipePool(user: number) {
-	return sql.begin(async sql => {
+export async function wipePool(user: number) {
+	const removed = await sql.begin(async sql => {
 		await sql`delete from published_logs where post_id in (select id from pool where "user" = ${user})`;
-		await sql`delete from "pool" where "user" = ${user}`;
+		return sql<{ cache_file: string | null }[]>`delete from "pool" where "user" = ${user} returning cache_file`;
 	});
+	await removeCacheFiles(removed.map(row => row.cache_file));
 }
 
-export function unschedulePost(user: number, id: string) {
-	return sql.begin(async sql => {
+export async function unschedulePost(user: number, id: string) {
+	const removed = await sql.begin(async sql => {
 		await sql`delete from published_logs where post_id = ${id} and post_id in (select id from pool where "user" = ${user})`;
-		await sql`delete from "pool" where "user" = ${user} and "id" = ${id}`;
+		return sql<{ cache_file: string | null }[]>`
+			delete from "pool" where "user" = ${user} and "id" = ${id} returning cache_file
+		`;
 	});
+	await removeCacheFiles(removed.map(row => row.cache_file));
 }
 
 export function unfailPost(user: number, id: string) {
