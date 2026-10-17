@@ -313,7 +313,9 @@ summary.settings-label {
 	justify-content: center;
 	width: 100%;
 }
-.moderable img {
+.moderable img, .moderable video {
+	display: block;
+	align-self: center;
 	max-height: 70svh;
 	max-width: 100%;
 	object-fit: contain;

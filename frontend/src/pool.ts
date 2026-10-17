@@ -1,4 +1,4 @@
-import { api, ok, fromTemplateFirst, el } from "./utils/utils";
+import { api, ok, fromTemplateFirst, el, isVideoUrl } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import type { RampikePagination } from "./components/pagination";
 
@@ -8,6 +8,14 @@ const STRIDE = 64;
 export function initPool() {
 	el<RampikePagination>("#pool-pagination")?.addEventListener("pick", e => {
 		loadMessagePool((e as CustomEvent<{ page: number }>).detail.page);
+	});
+	// stop the preview clip when the dialog closes, and don't keep downloading it
+	el<HTMLDialogElement>("dialog#pool-preview")?.addEventListener("close", () => {
+		const video = el<HTMLVideoElement>("dialog#pool-preview video");
+		if (!video) return;
+		video.pause();
+		video.removeAttribute("src");
+		video.load();
 	});
 }
 
@@ -56,11 +64,22 @@ function setPreviewPost(row: any){
 	if (!dialog) return;
 
 	const picture = dialog.querySelector("img");
-	if (!picture) return;
+	const video = dialog.querySelector("video");
+	if (!picture || !video) return;
 
 	// the grid keeps gelbooru's tiny previews; the dialog shows the cached copy when there is one
-	picture.src = row.cache_url ?? previewUrl(row.message);
-	picture.title = generateTitle(row);
+	const showVideo = isVideoUrl(row.cache_url);
+	picture.hidden = showVideo;
+	video.hidden = !showVideo;
+	if (showVideo) {
+		picture.removeAttribute("src");
+		video.src = row.cache_url;
+		video.title = generateTitle(row);
+		video.play().catch(() => {});
+	} else {
+		picture.src = row.cache_url ?? previewUrl(row.message);
+		picture.title = generateTitle(row);
+	}
 
 	const controls = dialog.querySelector("#pool-preview-controls");
 	if (!controls) return;

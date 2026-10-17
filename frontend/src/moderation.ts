@@ -1,4 +1,4 @@
-import { api, ok, fromTemplateFirst, el } from "./utils/utils";
+import { api, ok, fromTemplateFirst, el, isVideoUrl, createPreviewVideo } from "./utils/utils";
 import { pullCurtain } from "./utils/curtain";
 import { isBusy as upscalerIsBusy, loadTasks, runTasks, flushTasks } from "./utils/upscaler";
 import { PLACEHOLDER_URL } from "./pool";
@@ -96,7 +96,33 @@ function renderModerable(message: any, id: string, cacheUrl: string | null){
 		}
 	});
 
+	// Cached videos get a real player instead of the <a><img> preview. It plays while the card
+	// has focus, so stepping through with the keyboard previews each clip in turn.
+	if (cacheUrl && isVideoUrl(cacheUrl)) {
+		const video = createPreviewVideo(cacheUrl);
+		proto.querySelector("a")?.replaceWith(video);
+		const playIfFocused = () => {
+			if (proto.contains(document.activeElement)) video.play().catch(() => {});
+		};
+		proto.addEventListener("focusin", playIfFocused);
+		proto.addEventListener("focusout", () => video.pause());
+		// focus can arrive before the clip has loaded
+		video.addEventListener("canplay", playIfFocused, { once: true });
+
+		// the player replaced the link, keep a way to open the post
+		const open = document.createElement("a");
+		open.className = "tag tag-media";
+		open.href = source;
+		open.target = "_blank";
+		open.rel = "noreferrer";
+		open.tabIndex = -1;
+		open.textContent = "open ↗";
+		open.addEventListener("click", e => e.stopPropagation());
+		tags?.append(open);
+	}
+
 	proto.addEventListener("focusin", () => proto.scrollIntoView({ block: "center" }));
+	// keeps focus on the card (not the player) so the , and . shortcuts keep working
 	proto.addEventListener("mousedown", e => e.preventDefault());
 
 	return proto;

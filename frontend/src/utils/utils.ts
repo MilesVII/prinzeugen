@@ -125,6 +125,25 @@ export function formatDate(raw: string | null | undefined) {
 	return isNaN(date.getTime()) ? String(raw) : date.toLocaleString();
 }
 
+/** Cached media URLs keep the file extension: /media/123.mp4?sig=... */
+export function isVideoUrl(url: string | null | undefined) {
+	return !!url && /\.(mp4|webm)(\?|#|$)/i.test(url);
+}
+
+/** Muted looping player sized like the image previews; muted so play() is allowed without a click */
+export function createPreviewVideo(src: string, className = "") {
+	const video = document.createElement("video");
+	video.src = src;
+	video.className = className;
+	video.controls = true;
+	video.loop = true;
+	video.muted = true;
+	video.playsInline = true;
+	video.preload = "metadata";
+	video.tabIndex = -1;
+	return video;
+}
+
 export function isTyping() {
 	const active = document.activeElement as HTMLElement | null;
 	if (!active) return false;
