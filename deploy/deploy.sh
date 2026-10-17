@@ -8,6 +8,8 @@ cd "$APP_DIR"
 export PATH="$HOME/.bun/bin:$PATH"
 
 if [ "${1:-}" != "--no-pull" ]; then
+	echo "==> git stash"
+	git stash
 	echo "==> git pull"
 	git pull --ff-only
 fi
