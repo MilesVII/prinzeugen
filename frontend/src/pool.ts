@@ -10,8 +10,13 @@ export function initPool() {
 	el<RampikePagination>("#pool-pagination")?.addEventListener("pick", e => {
 		loadMessagePool((e as CustomEvent<{ page: number }>).detail.page);
 	});
+	const dialog = el<HTMLDialogElement>("dialog#pool-preview");
+	// clicks on the backdrop land on the <dialog> itself; clicks on the content land on the form inside
+	dialog?.addEventListener("click", event => {
+		if (event.target === dialog) dialog.close();
+	});
 	// stop the preview clip when the dialog closes, and don't keep downloading it
-	el<HTMLDialogElement>("dialog#pool-preview")?.addEventListener("close", () => {
+	dialog?.addEventListener("close", () => {
 		const video = el<HTMLVideoElement>("dialog#pool-preview video");
 		if (!video) return;
 		video.pause();
@@ -91,7 +96,7 @@ function setPreviewPost(row: any){
 			contents: link.text,
 			attributes: { href: link.url, target: "_blank", rel: "noreferrer" }
 		})),
-		...tags.map(tag => mudcrack({ tagName: "span", className: "tag tag-media", contents: tag })),
+		...tags.map(tag => mudcrack({ tagName: "span", className: "lineout", contents: tag })),
 		button("unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
 		row.failed ? button("unfail", () => unfailPost(row.id).then(() => dialog.close())) : "",
 		button("log details", () => console.log(row))

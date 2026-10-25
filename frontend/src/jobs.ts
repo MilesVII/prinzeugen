@@ -193,7 +193,7 @@ function renderJob(job: Job) {
 					mudcrack({ tagName: "code", contents: `${job.cron} ${job.timezone}` }),
 					mudcrack({
 						tagName: "span",
-						className: job.enabled ? "tag tag-ok" : "tag",
+						className: job.enabled ? "lineout tag-ok" : "lineout",
 						contents: job.enabled ? `next ${formatDate(job.next_run)}` : "disabled"
 					})
 				]

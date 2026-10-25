@@ -22,8 +22,8 @@ export function displayModerables(messages: any[]){
 	list.replaceChildren(...messages.flatMap(m => renderModerable(m.message, m.id, m.cache_url ?? null) ?? []));
 }
 
-function renderTag(text: string, kind: "artist" | "nsfw" | "media"){
-	return mudcrack({ tagName: "span", className: `tag tag-${kind}`, contents: text });
+function renderTag(text: string, accent = false){
+	return mudcrack({ tagName: "span", className: accent ? "lineout tag-nsfw" : "lineout", contents: text });
 }
 
 function renderModerable(message: any, id: string, cacheUrl: string | null){
@@ -90,15 +90,15 @@ function renderModerable(message: any, id: string, cacheUrl: string | null){
 			mudcrack({
 				className: "row-wrap moderable-info",
 				contents: [
-					...(message.artists ?? []).map((artist: string) => renderTag(`🎨 ${artist}`, "artist")),
-					message.nsfw && renderTag("nsfw", "nsfw"),
-					tags.includes("animated") && renderTag("animated", "media"),
-					tags.includes("animated_gif") && renderTag("gif", "media"),
-					tags.includes("video") && renderTag("video", "media"),
+					...(message.artists ?? []).map((artist: string) => renderTag(`🎨 ${artist}`)),
+					message.nsfw && renderTag("nsfw", true),
+					tags.includes("animated") && renderTag("animated"),
+					tags.includes("animated_gif") && renderTag("gif"),
+					tags.includes("video") && renderTag("video"),
 					// the player replaced the link, keep a way to open the post
 					video && mudcrack({
 						tagName: "a",
-						className: "tag tag-media",
+						className: "lineout",
 						contents: "open ↗",
 						attributes: { href: source, target: "_blank", rel: "noreferrer", tabindex: -1 },
 						events: { click: event => event.stopPropagation() }

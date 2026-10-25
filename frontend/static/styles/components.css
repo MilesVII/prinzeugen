@@ -26,7 +26,7 @@ button.lineout:disabled {
 	cursor: not-allowed;
 }
 
-button.lineout, .lineout.pointer, select.lineout, a.lineout {
+button.lineout, .lineout.pointer, select.lineout, a.lineout, span.lineout {
 	padding-inline: var(--dims-reg);
 }
 button.lineout, .pointer {
@@ -128,25 +128,10 @@ fieldset > .strip {
 	border-color: var(--color-accent);
 }
 
-.tag {
-	display: inline-block;
-	font: var(--font-smol);
-	padding: 2px var(--dims-reg);
-	border-radius: var(--dims-smol);
-	border: 1px solid var(--color-secondary);
-	color: var(--color-subtext);
-	white-space: nowrap;
-}
+/* tags are plain .lineout elements; these only tint them */
 .tag-nsfw {
 	border-color: var(--color-accent);
 	color: var(--color-accent);
-}
-.tag-media {
-	border-color: var(--color-subtext);
-	color: var(--color-text);
-}
-.tag-artist {
-	color: var(--color-text);
 }
 
 .flicker {
